@@ -1,0 +1,573 @@
+/* Tokens del sistema de diseño TilcaGo (mismos colores que en Figma) */
+:root {
+  --cream: #faf6ef;
+  --white: #ffffff;
+  --b100: #f3ebdd;
+  --b200: #e8dcc6;
+  --b300: #d6c3a3;
+  --ink: #2a211c;
+  --muted: #75685c;
+  --terra: #c2603a;
+  --terra-soft: #f6e2d6;
+  --teal: #2e6b5b;
+  --teal-soft: #dceae4;
+  --border: #e6dccb;
+  --font: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+  --sombra: 0 10px 30px rgba(42, 33, 28, 0.1);
+  --rebote: cubic-bezier(0.3, 1.45, 0.55, 1);
+  --suave: cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+}
+
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--cream);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--terra);
+  outline-offset: 2px;
+}
+
+/* ---------- Tipografía ---------- */
+.display-xl {
+  font: 600 clamp(40px, 5.2vw, 64px) / 1.05 var(--font-display);
+  letter-spacing: -0.01em;
+}
+.display-l {
+  font: 600 clamp(30px, 3.6vw, 44px) / 1.1 var(--font-display);
+}
+.display-m {
+  font: 600 30px / 1.15 var(--font-display);
+}
+.h-s {
+  font: 700 20px / 1.3 var(--font);
+}
+.h-xs {
+  font: 600 16px / 1.35 var(--font);
+}
+.body-l {
+  font: 400 18px / 1.55 var(--font);
+}
+.body-m {
+  font: 400 16px / 1.5 var(--font);
+}
+.body-s {
+  font: 400 14px / 1.45 var(--font);
+}
+.label-m {
+  font: 600 15px / 1.2 var(--font);
+}
+.label-s {
+  font: 600 12px / 1.2 var(--font);
+}
+.overline {
+  font: 700 12px / 1.2 var(--font);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.muted {
+  color: var(--muted);
+}
+.text-terra {
+  color: var(--terra);
+}
+.text-teal {
+  color: var(--teal);
+}
+
+/* ---------- Utilidades ---------- */
+.stack-2,
+.stack-4,
+.stack-8,
+.stack-10,
+.stack-12,
+.stack-14,
+.stack-16 {
+  display: flex;
+  flex-direction: column;
+}
+.stack-2 { gap: 2px; }
+.stack-4 { gap: 4px; }
+.stack-8 { gap: 8px; }
+.stack-10 { gap: 10px; }
+.stack-12 { gap: 12px; }
+.stack-14 { gap: 14px; }
+.stack-16 { gap: 16px; }
+.entre {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.fila-icono {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.centrado {
+  align-self: center;
+  text-align: center;
+}
+.mt-8 {
+  margin-top: 8px;
+}
+.dos-columnas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.divisor {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 2px 0;
+}
+.link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--terra);
+  font: 600 12px / 1.2 var(--font);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* ---------- Vidrio líquido ---------- */
+.glass {
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.3));
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 0 18px rgba(255, 255, 255, 0.25),
+    0 10px 30px rgba(42, 33, 28, 0.1);
+  backdrop-filter: blur(18px) saturate(165%);
+  -webkit-backdrop-filter: blur(18px) saturate(165%);
+}
+.card {
+  padding: 18px;
+  border-radius: 24px;
+}
+.card--lista {
+  padding: 4px 14px;
+}
+
+/* ---------- Tonos de íconos ---------- */
+.tono-terracota { background: var(--terra-soft); color: var(--terra); }
+.tono-verde { background: var(--teal-soft); color: var(--teal); }
+.tono-beige { background: var(--b200); color: var(--ink); }
+.tono-tinta { background: var(--ink); color: #fff; }
+.icono-cuadrado,
+.icono-redondo {
+  display: grid;
+  place-items: center;
+  flex: none;
+  background: var(--b100);
+}
+.icono-cuadrado {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+}
+.icono-redondo {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+/* ---------- Botones ---------- */
+.btn-wrap {
+  position: relative;
+  display: inline-flex;
+}
+.btn-wrap--block {
+  display: flex;
+  width: 100%;
+}
+.btn-wrap--block .btn {
+  width: 100%;
+}
+.btn {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 52px;
+  padding: 0 26px;
+  border-radius: 999px;
+  border: 0;
+  font: 600 15px / 1 var(--font);
+  text-decoration: none;
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: transform 0.18s var(--rebote), box-shadow 0.2s, opacity 0.2s;
+}
+.btn:hover {
+  transform: translateY(-2px);
+}
+.btn:active {
+  transform: scale(0.97);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+.btn--primary {
+  background: var(--terra);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(194, 96, 58, 0.35);
+}
+.btn--secondary {
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.btn--dark {
+  background: var(--ink);
+  color: #fff;
+}
+.btn__label {
+  position: relative;
+}
+.btn__halo {
+  position: absolute;
+  inset: 10px 18px -6px;
+  border-radius: 999px;
+  background: var(--terra);
+  filter: blur(16px);
+  opacity: 0.5;
+  z-index: 0;
+  pointer-events: none;
+  animation: halo 2.4s ease-in-out infinite;
+}
+.btn__shine {
+  position: absolute;
+  top: -40%;
+  bottom: -40%;
+  left: -100px;
+  width: 60px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: skewX(-20deg);
+  pointer-events: none;
+  animation: destello 3.4s ease-in-out 0.8s infinite;
+}
+.btn:disabled + .btn__halo,
+.btn-wrap:has(.btn:disabled) .btn__halo {
+  display: none;
+}
+.is-cargando .btn__label::after {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-left: 10px;
+  vertical-align: -2px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: girar 0.8s linear infinite;
+}
+
+/* ---------- Chips ---------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: max-content;
+  max-width: 100%;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font: 600 12px / 1.2 var(--font);
+  white-space: nowrap;
+}
+.chip--verde { background: var(--teal-soft); color: var(--teal); }
+.chip--terracota { background: var(--terra-soft); color: var(--terra); }
+.chip--beige { background: var(--b200); color: var(--muted); }
+.chip--oscuro { background: var(--ink); color: #fff; }
+.chip__dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
+  animation: parpadeo 1.2s ease-in-out infinite;
+}
+
+/* ---------- Botón de ícono ---------- */
+.icon-btn {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform 0.2s var(--rebote);
+}
+.icon-btn:active {
+  transform: scale(0.9);
+}
+.icon-plain {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+/* ---------- Campos ---------- */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field__label {
+  font: 600 12px / 1.2 var(--font);
+  color: var(--muted);
+}
+.field__box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 48px;
+  padding: 0 14px;
+  border-radius: 14px;
+  color: var(--muted);
+}
+.field__box:focus-within {
+  outline: 2px solid var(--terra);
+  outline-offset: 2px;
+}
+.field__input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: 400 16px / 1.2 var(--font);
+  color: var(--ink);
+}
+
+/* ---------- Filas de desglose ---------- */
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font: 400 14px / 1.4 var(--font);
+}
+.row__label {
+  color: var(--muted);
+}
+.row__value {
+  font: 600 15px / 1.3 var(--font);
+  text-align: right;
+}
+.row--strong .row__value {
+  font-size: 18px;
+}
+
+/* ---------- Notas ---------- */
+.nota {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  font: 400 14px / 1.45 var(--font);
+}
+.nota svg {
+  flex: none;
+  margin-top: 1px;
+}
+.nota--verde {
+  background: rgba(220, 234, 228, 0.88);
+  color: var(--teal);
+}
+
+/* ---------- Casilla ---------- */
+.casilla {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+.casilla input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.casilla__caja {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  border: 1.5px solid var(--b300);
+  background: #fff;
+  color: transparent;
+  transition: background 0.2s, border-color 0.2s, transform 0.2s var(--rebote);
+}
+.casilla input:checked + .casilla__caja {
+  background: var(--terra);
+  border-color: var(--terra);
+  color: #fff;
+  transform: scale(1.06);
+}
+.casilla input:focus-visible + .casilla__caja {
+  outline: 2px solid var(--terra);
+  outline-offset: 2px;
+}
+
+/* ---------- Idioma ---------- */
+.lang {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 999px;
+}
+.lang button {
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font: 700 12px / 1 var(--font);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.lang button.is-on {
+  background: var(--ink);
+  color: #fff;
+}
+
+/* ---------- Logo ---------- */
+.logo {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.logo__cat {
+  display: block;
+  width: 64px;
+  height: 36px;
+  transition: opacity 0.45s, transform 0.55s var(--rebote);
+}
+.logo__cat .tc {
+  width: 100%;
+  height: 100%;
+}
+.logo__word {
+  font: 600 24px / 1 var(--font-display);
+  color: var(--ink);
+  transition: opacity 0.45s 0.1s;
+}
+.logo .is-hidden {
+  opacity: 0;
+  transform: translateY(8px) scale(0.8);
+}
+.logo--llega .logo__cat {
+  animation: llegaLogo 0.6s var(--rebote);
+}
+
+/* ---------- Tilcayo ---------- */
+.tc {
+  display: block;
+  overflow: visible;
+}
+.tc--trepando {
+  position: relative;
+}
+.tc--trepando svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.tc__a {
+  animation: patasA 0.24s steps(1) infinite;
+}
+.tc__b {
+  animation: patasB 0.24s steps(1) infinite;
+}
+.tc .tc-eyes {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: parpadear 4.6s infinite;
+}
+.tc .tc-sparkles {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: chispas 1.6s ease-in-out infinite;
+}
+.tc .tc-tail {
+  transform-box: fill-box;
+  transform-origin: right center;
+  animation: cola 3s ease-in-out infinite;
+}
+
+/* ---------- Avisos ---------- */
+.toast {
+  position: absolute;
+  left: 50%;
+  bottom: 110px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px 8px 8px;
+  border-radius: 999px;
+  font: 600 14px / 1.2 var(--font);
+  white-space: nowrap;
+  transform: translateX(-50%);
+  animation: toastEntra 0.35s var(--rebote);
+}
+.toast__cat {
+  width: 34px;
+  height: 35px;
+}
