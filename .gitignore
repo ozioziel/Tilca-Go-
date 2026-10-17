@@ -1,0 +1,20 @@
+# Dependencias y compilados
+node_modules
+dist
+dist-ssr
+
+# Registros
+*.log
+npm-debug.log*
+
+# Editor y sistema
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+Thumbs.db
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
