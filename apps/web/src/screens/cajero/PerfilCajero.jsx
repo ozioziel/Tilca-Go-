@@ -4,6 +4,7 @@ import { Chip } from '../../components/ui'
 import { useBackend } from '../../lib/backend'
 import { shortAddress } from '../../lib/wallet'
 import { useWalletChecks } from '../comun/Wallet'
+import { isNative } from '../../lib/platform'
 import { useI18n } from '../../i18n'
 
 export default function PerfilCajero({ nav, state }) {
@@ -71,6 +72,11 @@ export default function PerfilCajero({ nav, state }) {
         </button>
       </div>
 
+      {isNative && (
+        <button type="button" className="link centrado" onClick={() => (window.location.hash = '#/app')}>
+          {t('perfilC.modoTurista')}
+        </button>
+      )}
       <button type="button" className="salir" onClick={salir}>
         <LogOut size={18} aria-hidden="true" /> {t('perfil.salir')}
       </button>

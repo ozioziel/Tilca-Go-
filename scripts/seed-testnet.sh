@@ -110,6 +110,23 @@ ADMIN_ADDRESS=$ADMIN
 GAS_SPONSOR_SECRET=$(stellar keys show "$P-gas-sponsor")
 # Tope de comisión que el patrocinador acepta pagar por transacción (stroops de XLM)
 GAS_MAX_FEE_STROOPS=2000000
+# Faucet de la demo (solo testnet, solo con activo propio): envía TUSDC a las wallets nuevas de la app
+FAUCET_ISSUER_SECRET=$([[ "$OWN_ASSET" == 1 ]] && stellar keys show "$P-issuer" || true)
+FAUCET_AMOUNT=100
+
+# Cotización de ejemplo de la v3: referencia, margen y comisiones (FEE_BPS_PLATFORM = fee_bps del contrato)
+RATE_REF_BOB=10.00
+MARGIN_BPS=50
+FEE_BPS_TOTAL=150
+FEE_BPS_PLATFORM=$FEE_BPS
+QUOTE_TTL_MIN=10
+ORDER_TTL_MIN=120
+
+# Demo: el OTP se devuelve en la respuesta en vez de enviarse por correo
+OTP_DEV=true
+ADMIN_EMAILS=admin@tilcago.test
+CODE_PEPPER=$(openssl rand -hex 16)
+CORS_ORIGIN=http://localhost:5173,https://localhost,capacitor://localhost
 EOF
 cat > "$ROOT/apps/api/.env.demo" <<EOF
 # Claves de PRUEBA para scripts de demo (simulan las wallets del turista y del cajero)

@@ -4,9 +4,11 @@ import { Listo, QRCode } from '../../components/QR'
 import { Button, Field, Header } from '../../components/ui'
 import { useTimers } from '../../components/hooks'
 import { errorText, useBackend } from '../../lib/backend'
+import { isNative, platform } from '../../lib/platform'
 import { useI18n } from '../../i18n'
 
-const soportaCamara = () => typeof window !== 'undefined' && 'BarcodeDetector' in window && Boolean(navigator.mediaDevices?.getUserMedia)
+const platformIsAndroid = () => platform === 'android'
+const soportaCamara = () => isNative || typeof window !== 'undefined' && 'BarcodeDetector' in window && Boolean(navigator.mediaDevices?.getUserMedia)
 
 /**
  * El cajero escanea el QR del turista (cámara con BarcodeDetector, si el navegador
@@ -48,8 +50,35 @@ export default function Escanear({ nav, setState }) {
 
   useEffect(() => detener, [])
 
+  // En la app nativa: escáner de Google (ML Kit), sin permisos de cámara en Android
+  const escanearNativo = async () => {
+    const { BarcodeScanner, BarcodeFormat } = await import('@capacitor-mlkit/barcode-scanning')
+    if (platformIsAndroid()) {
+      const { available } = await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable()
+      if (!available) {
+        await BarcodeScanner.installGoogleBarcodeScannerModule()
+        setError(t('escanear.instalando'))
+        return
+      }
+    }
+    const { barcodes } = await BarcodeScanner.scan({ formats: [BarcodeFormat.QrCode] })
+    const raw = barcodes[0]?.rawValue ?? ''
+    if (raw.toLowerCase().startsWith('tilcago:')) {
+      setCodigo(raw.slice(8))
+      validar(raw)
+    } else if (raw) setError(t('escanear.noEsTilcago'))
+  }
+
   const encender = async () => {
     setError('')
+    if (isNative) {
+      try {
+        await escanearNativo()
+      } catch {
+        setError(t('escanear.sinCamara'))
+      }
+      return
+    }
     try {
       stream.current = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
       setCamara(true)

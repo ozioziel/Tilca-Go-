@@ -5,13 +5,15 @@ import CajeroApp from './screens/cajero'
 import Landing from './screens/web/Landing'
 import { LangToggle, Logo } from './components/ui'
 import { useI18n } from './i18n'
+import { isNative } from './lib/platform'
 
 // Rutas con hash para no necesitar servidor: #/ (web), #/app (turista), #/cajero
+// En la app nativa no hay landing: se abre directo la app del turista
 function rutaActual() {
   const h = window.location.hash
   if (h.startsWith('#/app')) return 'app'
   if (h.startsWith('#/cajero')) return 'cajero'
-  return 'web'
+  return isNative ? 'app' : 'web'
 }
 
 function useRuta() {
@@ -60,5 +62,7 @@ export default function App() {
   }, [ruta])
 
   if (ruta === 'web') return <Landing />
+  // En el celular la app ocupa toda la pantalla, sin el marco de escritorio
+  if (isNative) return ruta === 'app' ? <TuristaApp key="turista" /> : <CajeroApp key="cajero" />
   return <Escenario ruta={ruta}>{ruta === 'app' ? <TuristaApp key="turista" /> : <CajeroApp key="cajero" />}</Escenario>
 }

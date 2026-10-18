@@ -2,7 +2,7 @@ import { rpc, scValToNative } from '@stellar/stellar-sdk'
 import type pg from 'pg'
 import { config } from '../config'
 import { audit, pool, tx } from '../db/pool'
-import { server } from './escrow'
+import { server, withRetry } from './escrow'
 
 /**
  * Sincroniza el estado de las órdenes con los eventos del contrato.
@@ -175,14 +175,14 @@ export function syncOnce(): Promise<void> {
       let startLedger = rows[0]?.start_ledger ?? undefined
       if (!cursor && !startLedger) {
         // Primera vez: desde un rato antes del último ledger (la retención de RPC es limitada)
-        startLedger = Math.max(1, (await server.getLatestLedger()).sequence - 2_000)
+        startLedger = Math.max(1, (await withRetry(() => server.getLatestLedger())).sequence - 2_000)
         await pool.query('INSERT INTO chain_cursor (id, start_ledger) VALUES (1, $1) ON CONFLICT (id) DO UPDATE SET start_ledger = $1', [startLedger])
       }
       for (let page = 0; page < 20; page++) {
         const filters = [{ type: 'contract' as const, contractIds: [config.ESCROW_CONTRACT_ID] }]
-        const res = cursor
-          ? await server.getEvents({ cursor, filters, limit: 100 })
-          : await server.getEvents({ startLedger: startLedger!, filters, limit: 100 })
+        const res = await withRetry(() =>
+          cursor ? server.getEvents({ cursor, filters, limit: 100 }) : server.getEvents({ startLedger: startLedger!, filters, limit: 100 }),
+        )
         for (const raw of res.events) {
           const ev = parseEvent(raw)
           if (ev) await processEvent(ev)

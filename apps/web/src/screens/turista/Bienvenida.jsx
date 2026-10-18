@@ -2,6 +2,7 @@ import Tilcayo from '../../components/Tilcayo'
 import { Onda } from '../../components/Paisaje'
 import { Button, Chip, LangToggle, Lines, Logo } from '../../components/ui'
 import { useBackend } from '../../lib/backend'
+import { isNative } from '../../lib/platform'
 import { cotizarCon } from '../../lib/quote'
 import { useI18n } from '../../i18n'
 
@@ -54,6 +55,11 @@ export default function Bienvenida({ nav, setState }) {
           </>
         )}
       </div>
+      {isNative && (
+        <button type="button" className="link centrado" onClick={() => (window.location.hash = '#/cajero')}>
+          {t('bienv.soyCajero')}
+        </button>
+      )}
       <LangToggle className="centrado" />
     </div>
   )

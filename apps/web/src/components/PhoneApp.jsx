@@ -1,10 +1,12 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { App as NativeApp } from '@capacitor/app'
 import { Signal, Wifi, BatteryFull } from 'lucide-react'
 import Paisaje from './Paisaje'
 import Transicion from './Transicion'
 import { TabBar, Toast } from './ui'
 import { useI18n } from '../i18n'
 import { useReducedMotion, useTimers } from './hooks'
+import { isNative } from '../lib/platform'
 
 /**
  * Contenedor de una app (turista o cajero): fondo andino, pila de pantallas,
@@ -22,6 +24,9 @@ export default function PhoneApp({ screens, initial, tabs, state, setState }) {
   const [cat, setCat] = useState(null) // { label, phase }
   const [toastMsg, setToastMsg] = useState('')
   const busy = useRef(false)
+  // Si se toca algo mientras el tilcayo cambia la pantalla, se ejecuta al terminar (no se pierde el toque)
+  const pendiente = useRef(null)
+  const goRef = useRef(null)
   const toastTimer = useRef(null)
 
   const top = stack[stack.length - 1]
@@ -32,7 +37,10 @@ export default function PhoneApp({ screens, initial, tabs, state, setState }) {
 
   const go = useCallback(
     (to, opts = {}) => {
-      if (busy.current) return
+      if (busy.current) {
+        pendiente.current = { to, opts }
+        return
+      }
       if (reduce || opts.plain) {
         apply(to, opts)
         setMode('fade')
@@ -50,11 +58,16 @@ export default function PhoneApp({ screens, initial, tabs, state, setState }) {
       later(() => {
         setMode('idle')
         busy.current = false
+        const next = pendiente.current
+        pendiente.current = null
+        if (next) goRef.current?.(next.to, next.opts)
       }, 680)
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [reduce, t],
   )
+
+  goRef.current = go
 
   const back = useCallback(() => {
     if (busy.current) return
@@ -69,6 +82,20 @@ export default function PhoneApp({ screens, initial, tabs, state, setState }) {
   }, [])
 
   const nav = useMemo(() => ({ go, back, top }), [go, back, top])
+
+  // Botón «atrás» de Android: vuelve una pantalla; en la primera, cierra la app
+  const stackLen = useRef(stack.length)
+  stackLen.current = stack.length
+  useEffect(() => {
+    if (!isNative) return
+    const handle = NativeApp.addListener('backButton', () => {
+      if (stackLen.current > 1) back()
+      else NativeApp.exitApp()
+    })
+    return () => {
+      handle.then((h) => h.remove())
+    }
+  }, [back])
   const activeTab = tabs?.map[top]
 
   return (

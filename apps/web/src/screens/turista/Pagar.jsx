@@ -133,7 +133,7 @@ export default function Pagar({ nav, state, setState }) {
           <Wallet size={18} aria-hidden="true" />
         </span>
         <span className="metodo__texto">
-          <strong>{wallet.address ? `Freighter · ${shortAddress(wallet.address)}` : t('pagar.conectarWallet')}</strong>
+          <strong>{wallet.address ? `${wallet.kind === 'device' ? t('pagar.walletDispositivo') : 'Freighter'} · ${shortAddress(wallet.address)}` : t('pagar.conectarWallet')}</strong>
           <span>{checks.lista ? t('pagar.walletLista', { asset: checks.asset }) : t('pagar.walletFalta')}</span>
         </span>
         <ChevronRight size={18} className="muted" aria-hidden="true" />
