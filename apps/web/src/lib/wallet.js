@@ -43,42 +43,68 @@ async function saveDeviceSecret(app, secret) {
   else await Preferences.remove({ key: deviceKey(app) })
 }
 
-/** Agrega la trustline al activo si la cuenta existe y todavía no la tiene. */
-async function ensureTrustline(secret, assetLine) {
-  const { Asset, BASE_FEE, Horizon, Keypair, Operation, TransactionBuilder } = await sdk()
-  const kp = Keypair.fromSecret(secret)
+/**
+ * Agrega la trustline al activo si todavía no está. `firmar(xdr)` devuelve el XDR firmado:
+ * con la clave del dispositivo o con Freighter. Si la cuenta no existe en testnet, la fondea con Friendbot.
+ */
+async function ensureTrustline(address, assetLine, firmar) {
+  const { Asset, BASE_FEE, Horizon, Operation, TransactionBuilder } = await sdk()
   const horizon = new Horizon.Server(HORIZON_URL)
-  const account = await horizon.loadAccount(kp.publicKey())
+  let account
+  try {
+    account = await horizon.loadAccount(address)
+  } catch {
+    const res = await fetch(`https://friendbot.stellar.org/?addr=${address}`)
+    if (!res.ok) throw new WalletError('friendbot', 'Friendbot no respondió; intenta de nuevo en unos segundos')
+    account = await horizon.loadAccount(address)
+  }
   const [code, issuer] = assetLine.split(':')
   if (account.balances.some((b) => b.asset_code === code && b.asset_issuer === issuer)) return
   const tx = new TransactionBuilder(account, { fee: BASE_FEE, networkPassphrase: TESTNET_PASSPHRASE })
     .addOperation(Operation.changeTrust({ asset: new Asset(code, issuer) }))
-    .setTimeout(60)
+    .setTimeout(120)
     .build()
-  tx.sign(kp)
-  await horizon.submitTransaction(tx)
+  const signed = await firmar(tx.toXDR())
+  await horizon.submitTransaction(TransactionBuilder.fromXDR(signed, TESTNET_PASSPHRASE))
+}
+
+async function firmarConClave(secret) {
+  const { Keypair, TransactionBuilder } = await sdk()
+  const kp = Keypair.fromSecret(secret)
+  return { address: kp.publicKey(), firmar: async (xdr) => {
+    const tx = TransactionBuilder.fromXDR(xdr, TESTNET_PASSPHRASE)
+    tx.sign(kp)
+    return tx.toXDR()
+  } }
+}
+
+/** Agrega la trustline del activo a la wallet en uso (dispositivo o Freighter). */
+export async function addTrustline(app, address, assetLine) {
+  const secret = await deviceSecret(app)
+  if (secret) {
+    const { firmar } = await firmarConClave(secret)
+    return ensureTrustline(address, assetLine, firmar)
+  }
+  return ensureTrustline(address, assetLine, (xdr) => signXdr(app, xdr, TESTNET_PASSPHRASE, address))
 }
 
 /** Crea una cuenta de testnet en el dispositivo, la fondea con Friendbot y agrega la trustline. */
 export async function createDeviceWallet(app, assetLine) {
   const { Keypair } = await sdk()
   const kp = Keypair.random()
-  const res = await fetch(`https://friendbot.stellar.org/?addr=${kp.publicKey()}`)
-  if (!res.ok) throw new WalletError('friendbot', 'Friendbot no respondió; intenta de nuevo en unos segundos')
-  await ensureTrustline(kp.secret(), assetLine)
+  const { firmar } = await firmarConClave(kp.secret())
+  await ensureTrustline(kp.publicKey(), assetLine, firmar)
   await saveDeviceSecret(app, kp.secret())
   return kp.publicKey()
 }
 
 /** Importa una clave secreta de TESTNET (por ejemplo, una cuenta del seed de la demo). */
 export async function importDeviceWallet(app, secret, assetLine) {
-  const { Keypair, StrKey } = await sdk()
+  const { StrKey } = await sdk()
   const s = secret.trim()
   if (!StrKey.isValidEd25519SecretSeed(s)) throw new WalletError('bad_secret', 'La clave no es válida (empieza con S y tiene 56 caracteres)')
-  const address = Keypair.fromSecret(s).publicKey()
-  const res = await fetch(`${HORIZON_URL}/accounts/${address}`)
-  if (res.status === 404) await fetch(`https://friendbot.stellar.org/?addr=${address}`)
-  await ensureTrustline(s, assetLine)
+  const { address, firmar } = await firmarConClave(s)
+  await ensureTrustline(address, assetLine, firmar)
   await saveDeviceSecret(app, s)
   return address
 }

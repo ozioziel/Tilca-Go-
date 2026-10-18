@@ -27,7 +27,7 @@ export function useWalletChecks(esperada) {
  */
 export default function Wallet({ nav, state, esperada }) {
   const { t, num } = useI18n()
-  const { wallet, balance, health, user, api, connect, checkWallet, refreshBalance, createDevice, importDevice, forgetDevice } = useBackend()
+  const { wallet, balance, health, user, api, connect, checkWallet, refreshBalance, createDevice, importDevice, forgetDevice, addAssetTrustline } = useBackend()
   const c = useWalletChecks(esperada)
   const [cargando, setCargando] = useState('')
   const [importando, setImportando] = useState(false)
@@ -124,6 +124,10 @@ export default function Wallet({ nav, state, esperada }) {
           <a className="btn btn--primary btn--link" href={FREIGHTER_URL} target="_blank" rel="noreferrer">
             {t('wallet.instalarBoton')} <ExternalLink size={16} aria-hidden="true" />
           </a>
+        ) : c.conectada && c.cuentaOk && c.redOk && !c.usdcOk ? (
+          <Button disabled={Boolean(cargando)} onClick={accion('trustline', addAssetTrustline)} className={cargando === 'trustline' ? 'is-cargando' : ''} icon={!cargando}>
+            {cargando === 'trustline' ? t('wallet.agregandoActivo') : t('wallet.agregarActivo', { asset: c.asset })}
+          </Button>
         ) : sinSaldo && health?.faucet && user ? (
           <Button disabled={Boolean(cargando)} onClick={pedirSaldo} className={cargando === 'faucet' ? 'is-cargando' : ''} icon={!cargando}>
             <Download size={16} aria-hidden="true" /> {t('wallet.faucet', { asset: c.asset })}

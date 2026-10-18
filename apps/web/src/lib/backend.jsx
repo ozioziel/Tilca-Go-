@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError, loadSession, request, saveSession } from './api'
-import { connectWallet, createDeviceWallet, forgetDeviceWallet, importDeviceWallet, signXdr, walletBalances, walletStatus, WalletError } from './wallet'
+import { addTrustline, connectWallet, createDeviceWallet, forgetDeviceWallet, importDeviceWallet, signXdr, walletBalances, walletStatus, WalletError } from './wallet'
 
 /**
  * Estado compartido de una app (turista o cajero): sesión, configuración del
@@ -110,6 +110,14 @@ export function BackendProvider({ app, children }) {
     return checkWallet()
   }, [app, checkWallet])
 
+  // Agrega la trustline del activo de la demo a la wallet conectada (Freighter la firma en su ventana)
+  const addAssetTrustline = useCallback(async () => {
+    if (!health || !wallet.address) throw new WalletError('not_connected', 'Conecta tu wallet primero')
+    await addTrustline(app, wallet.address, health.asset)
+    await refreshBalance(wallet.address)
+    return checkWallet()
+  }, [app, health, wallet.address, refreshBalance, checkWallet])
+
   const requestOtp = useCallback((email) => request('POST', '/auth/otp/request', { body: { email } }), [])
 
   const login = useCallback(
@@ -151,8 +159,8 @@ export function BackendProvider({ app, children }) {
   )
 
   const value = useMemo(
-    () => ({ app, session, user: session?.user ?? null, health, rate, offline, wallet, balance, api, login, logout, requestOtp, checkWallet, connect, refreshBalance, sendTx, createDevice, importDevice, forgetDevice }),
-    [app, session, health, rate, offline, wallet, balance, api, login, logout, requestOtp, checkWallet, connect, refreshBalance, sendTx, createDevice, importDevice, forgetDevice],
+    () => ({ app, session, user: session?.user ?? null, health, rate, offline, wallet, balance, api, login, logout, requestOtp, checkWallet, connect, refreshBalance, sendTx, createDevice, importDevice, forgetDevice, addAssetTrustline }),
+    [app, session, health, rate, offline, wallet, balance, api, login, logout, requestOtp, checkWallet, connect, refreshBalance, sendTx, createDevice, importDevice, forgetDevice, addAssetTrustline],
   )
   return <BackendContext.Provider value={value}>{children}</BackendContext.Provider>
 }
