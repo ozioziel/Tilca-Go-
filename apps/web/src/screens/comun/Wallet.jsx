@@ -124,20 +124,17 @@ export default function Wallet({ nav, state, esperada }) {
           <a className="btn btn--primary btn--link" href={FREIGHTER_URL} target="_blank" rel="noreferrer">
             {t('wallet.instalarBoton')} <ExternalLink size={16} aria-hidden="true" />
           </a>
-        ) : !c.conectada || !c.cuentaOk ? (
-          <Button disabled={Boolean(cargando)} onClick={accion('conectar', connect)} className={cargando === 'conectar' ? 'is-cargando' : ''} icon={!cargando}>
-            {t('wallet.conectarBoton')}
-          </Button>
-        ) : !c.redOk ? (
-          // Con la red equivocada nada más funciona: primero hay que cambiarla en Freighter
-          <p className="nota nota--beige">{t('wallet.cambiarRed')}</p>
-        ) : !c.usdcOk ? (
+        ) : c.conectada && c.cuentaOk && c.redOk && !c.usdcOk ? (
           <Button disabled={Boolean(cargando)} onClick={accion('trustline', addAssetTrustline)} className={cargando === 'trustline' ? 'is-cargando' : ''} icon={!cargando}>
             {cargando === 'trustline' ? t('wallet.agregandoActivo') : t('wallet.agregarActivo', { asset: c.asset })}
           </Button>
         ) : sinSaldo && health?.faucet && user ? (
           <Button disabled={Boolean(cargando)} onClick={pedirSaldo} className={cargando === 'faucet' ? 'is-cargando' : ''} icon={!cargando}>
             <Download size={16} aria-hidden="true" /> {t('wallet.faucet', { asset: c.asset })}
+          </Button>
+        ) : !c.conectada || !c.cuentaOk ? (
+          <Button disabled={Boolean(cargando)} onClick={accion('conectar', connect)} className={cargando === 'conectar' ? 'is-cargando' : ''} icon={!cargando}>
+            {t('wallet.conectarBoton')}
           </Button>
         ) : null}
 
