@@ -8,7 +8,7 @@ import { useI18n } from '../../i18n'
  * Inicio de sesión con correo + código de un solo uso (v3 §4 paso 4).
  * Se usa en la app del turista y en la del cajero. `onDone(session)` decide a dónde ir.
  */
-export default function Acceso({ nav, onDone, emailInicial = '', nota }) {
+export default function Acceso({ nav, onDone, emailInicial = '', nota, sugerencias = [] }) {
   const { t } = useI18n()
   const { requestOtp, login } = useBackend()
   const [paso, setPaso] = useState('correo') // correo | codigo
@@ -60,7 +60,25 @@ export default function Acceso({ nav, onDone, emailInicial = '', nota }) {
 
       <div className="glass card stack-14 entra" style={{ '--i': 0 }}>
         {paso === 'correo' ? (
-          <Field label={t('crear.correo')} value={email} onChange={setEmail} type="email" autoComplete="email" inputMode="email" placeholder="tu@correo.com" />
+          <>
+            <Field label={t('crear.correo')} value={email} onChange={setEmail} type="email" autoComplete="email" inputMode="email" placeholder="tu@correo.com" />
+            {sugerencias.length > 0 && (
+              <div className="stack-8">
+                <span className="label-s muted">{t('acceso.cuentasDemo')}</span>
+                {sugerencias.map((c) => (
+                  <button
+                    key={c.email}
+                    type="button"
+                    className={`cuenta-demo ${email === c.email ? 'is-on' : ''}`}
+                    onClick={() => setEmail(c.email)}
+                  >
+                    <strong>{c.email}</strong>
+                    <span>{c.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
         ) : (
           <>
             <p className="body-s muted fila-icono">

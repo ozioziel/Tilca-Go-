@@ -13,6 +13,12 @@ import OrdenesCajero from './OrdenesCajero'
 import PerfilCajero from './PerfilCajero'
 import { useI18n } from '../../i18n'
 
+// Cajeros de la demo (los crea `npm run seed` en el API)
+const CUENTAS_DEMO = [
+  { email: 'rosa@tilcago.test', label: 'Sagárnaga Cambios' },
+  { email: 'tiwanaku@tilcago.test', label: 'Minimarket Tiwanaku' },
+]
+
 function AccesoCajero({ nav, setState }) {
   const { t } = useI18n()
   const { api, logout } = useBackend()
@@ -26,7 +32,7 @@ function AccesoCajero({ nav, setState }) {
       nav.go('sinPunto', { replace: true })
     }
   }
-  return <Acceso nav={nav} onDone={listo} emailInicial={import.meta.env.DEV ? 'rosa@tilcago.test' : ''} nota={t('cajero.accesoNota')} />
+  return <Acceso nav={nav} onDone={listo} nota={t('cajero.accesoNota')} sugerencias={CUENTAS_DEMO} />
 }
 
 function SinPunto({ nav }) {
