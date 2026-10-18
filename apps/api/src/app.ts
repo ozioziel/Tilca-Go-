@@ -6,6 +6,7 @@ import { HttpError } from './lib/errors'
 import { adminRoutes } from './modules/admin'
 import { agentRoutes } from './modules/agents'
 import { authRoutes } from './modules/auth'
+import { faucetRoutes } from './modules/faucet'
 import { orderRoutes } from './modules/orders'
 import { quoteRoutes } from './modules/quotes'
 
@@ -33,6 +34,7 @@ export async function buildApp() {
     escrow: config.ESCROW_CONTRACT_ID,
     asset: `${config.USDC_ASSET_CODE}:${config.USDC_ASSET_ISSUER}`,
     asset_sac: config.USDC_SAC_ID,
+    faucet: Boolean(config.FAUCET_ISSUER_SECRET),
   }))
 
   await app.register(authRoutes)
@@ -40,5 +42,6 @@ export async function buildApp() {
   await app.register(agentRoutes)
   await app.register(orderRoutes)
   await app.register(adminRoutes)
+  if (config.FAUCET_ISSUER_SECRET) await app.register(faucetRoutes)
   return app
 }

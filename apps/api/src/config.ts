@@ -34,8 +34,12 @@ const schema = z.object({
     .default('')
     .transform((s) => s.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)),
   CODE_PEPPER: z.string().min(8),
-  CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  // La app móvil (Capacitor) llama desde https://localhost (Android) y capacitor://localhost (iOS)
+  CORS_ORIGIN: z.string().default('http://localhost:5173,https://localhost,capacitor://localhost'),
   SYNC_INTERVAL_MS: z.coerce.number().int().positive().default(5000),
+  // Solo testnet: clave del emisor del activo de prueba para el faucet de la demo (vacío = faucet apagado)
+  FAUCET_ISSUER_SECRET: z.preprocess((v) => v || undefined, z.string().startsWith('S').optional()),
+  FAUCET_AMOUNT: z.coerce.number().int().positive().max(1000).default(100),
 })
 
 const parsed = schema.safeParse(process.env)
