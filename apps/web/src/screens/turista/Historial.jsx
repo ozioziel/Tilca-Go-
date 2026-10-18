@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import Fila from '../../components/Fila'
 import { Chip, IconButton } from '../../components/ui'
-import { errorText, useBackend } from '../../lib/backend'
+import { errorText, useBackend, usePolling } from '../../lib/backend'
 import { ACTIVAS, ESTADO_FILA, esHoy, fecha } from '../../lib/ordenes'
 import { useI18n } from '../../i18n'
 
@@ -29,6 +29,10 @@ export default function Historial({ nav, setState }) {
     if (user) cargar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
+
+  // Mientras haya órdenes en curso, se actualiza sola (la cadena puede cambiarlas: disputas, reembolsos)
+  const enCurso = (ordenes ?? []).some((o) => ACTIVAS.has(o.status) || o.status === 'AWAITING_PAYMENT')
+  usePolling(cargar, 5000, Boolean(user) && enCurso)
 
   const f = FILTROS.find((x) => x.id === filtro)
   const visibles = (ordenes ?? []).filter(f.test)

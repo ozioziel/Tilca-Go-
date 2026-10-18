@@ -38,7 +38,7 @@ const DICT = {
     'shell.turista': 'App del turista',
     'shell.cajero': 'App del cajero',
     'shell.web': 'Sitio web',
-    'shell.nota': 'Los pagos, el QR y Stellar están simulados. Las cifras son de ejemplo.',
+    'shell.nota': 'Conectado a Stellar Testnet: los pagos son transacciones reales en la red de prueba, sin dinero real.',
     // Bienvenida
     'bienv.recibes': 'Recibes en efectivo',
     'bienv.listo': 'Listo para retirar',
@@ -436,7 +436,7 @@ const DICT = {
     'shell.turista': 'Tourist app',
     'shell.cajero': 'Cashier app',
     'shell.web': 'Website',
-    'shell.nota': 'Payments, the QR code and Stellar are simulated. Figures are examples.',
+    'shell.nota': 'Connected to Stellar Testnet: payments are real transactions on the test network, with no real money.',
     'bienv.recibes': 'You get in cash',
     'bienv.listo': 'Ready to collect',
     'bienv.tasaHoy': "Today's rate",

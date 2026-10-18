@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Clock, House, MapPin, QrCode, User } from 'lucide-react'
 import PhoneApp from '../../components/PhoneApp'
-import { BackendProvider } from '../../lib/backend'
+import { BackendProvider, useBackend } from '../../lib/backend'
 import Bienvenida from './Bienvenida'
 import CrearCuenta from './CrearCuenta'
 import Inicio from './Inicio'
@@ -45,11 +45,17 @@ const TABS = {
 // Estado de la app: monto, cotización fijada, cajero elegido, orden y código de retiro en curso
 const INICIAL = { usd: 100, quote: null, agents: null, agentId: null, order: null, withdrawal: null, introPending: false, saldoOculto: false, despuesDeAcceso: null, despuesDeWallet: null }
 
-export default function TuristaApp() {
+// Con sesión abierta se entra directo al inicio; sin sesión, a la bienvenida
+function TuristaPhone() {
+  const { user } = useBackend()
   const [state, setState] = useState(INICIAL)
+  return <PhoneApp screens={SCREENS} initial={user ? 'inicio' : 'bienvenida'} tabs={TABS} state={state} setState={setState} />
+}
+
+export default function TuristaApp() {
   return (
     <BackendProvider app="turista">
-      <PhoneApp screens={SCREENS} initial="bienvenida" tabs={TABS} state={state} setState={setState} />
+      <TuristaPhone />
     </BackendProvider>
   )
 }
