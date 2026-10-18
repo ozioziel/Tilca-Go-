@@ -1,0 +1,52 @@
+# Despliegue de TilcaGo en un VPS: base de datos, API y sitio web.
+# Solo se publica el contenedor web en 127.0.0.1:${WEB_PORT}; el Nginx del servidor le reenvía el dominio.
+#
+#   cd deploy
+#   docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+name: tilcago
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tilcago
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en deploy/.env}
+      POSTGRES_DB: tilcago
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tilcago"]
+      interval: 5s
+      retries: 20
+
+  api:
+    build: ../apps/api
+    restart: unless-stopped
+    env_file: ../apps/api/.env
+    environment:
+      DATABASE_URL: postgres://tilcago:${POSTGRES_PASSWORD}@db:5432/tilcago
+      PORT: 4000
+      # La web llama al API por el mismo dominio; la app móvil, desde los orígenes de Capacitor
+      CORS_ORIGIN: https://${DOMAIN:-localhost},https://localhost,capacitor://localhost
+    volumes:
+      # Claves de prueba para `npm run seed` (cajeros de demo); solo lectura
+      - ../apps/api/.env.demo:/app/.env.demo:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ../apps/web
+      args:
+        VITE_API_URL: /api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8080}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  db-data:

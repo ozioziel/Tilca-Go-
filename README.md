@@ -69,6 +69,10 @@ Para probar los dos lados en la misma computadora, abre cada app en un perfil di
 
 Testnet se reinicia cada cierto tiempo: si el API avisa que no encuentra el contrato, vuelve a correr `./scripts/seed-testnet.sh` y `npm run seed`. Para usar un USDC de prueba existente en lugar de TUSDC: `ASSET=USDC:G... ./scripts/seed-testnet.sh`.
 
+## Despliegue en un VPS
+
+`deploy/` tiene todo para producción con Docker: base de datos, API y web (con su propio Nginx, que también reenvía `/api/`). Solo se publica `127.0.0.1:8080`; el Nginx del servidor y Certbot ponen el dominio y el HTTPS. Pasos en [deploy/README.md](deploy/README.md).
+
 ## App móvil (Android e iOS)
 
 La misma app de React se empaqueta como app nativa con [Capacitor](https://capacitorjs.com) (`apps/web/android` y `apps/web/ios`). En el celular abre directo la app del turista; desde la bienvenida se pasa a TilcaGo Partners (cajero).

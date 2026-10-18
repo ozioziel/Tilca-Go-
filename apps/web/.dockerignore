@@ -1,0 +1,9 @@
+node_modules
+dist
+android
+ios
+assets
+.env
+.env.*
+!.env.example
+*.log
