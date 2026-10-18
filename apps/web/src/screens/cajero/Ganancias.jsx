@@ -1,7 +1,7 @@
 import { Zap } from 'lucide-react'
 import Fila from '../../components/Fila'
 import { Chip } from '../../components/ui'
-import { CAJERA, GANANCIAS, LIQUIDACIONES, RATE } from '../../data/config'
+import { CAJERA, GANANCIAS, PAGOS_RECIBIDOS, RATE } from '../../data/config'
 import { useI18n } from '../../i18n'
 
 export default function Ganancias() {
@@ -42,7 +42,7 @@ export default function Ganancias() {
       <section className="stack-8">
         <span className="overline">{t('ganancias.liquidaciones')}</span>
         <div className="glass card card--lista">
-          {LIQUIDACIONES.map((l, i) => (
+          {PAGOS_RECIBIDOS.map((l, i) => (
             <Fila key={l.id} i={i} estado={l.estado} titulo={L(l.titulo)} detalle={L(l.detalle)} monto={l.monto} chip={L(l.chip)} />
           ))}
         </div>

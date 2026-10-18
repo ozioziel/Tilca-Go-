@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { ArrowUpDown, Check, ChevronDown, DollarSign, Wallet } from 'lucide-react'
 import { Button, Chip, Header, Row } from '../../components/ui'
 import { useCountdown } from '../../components/hooks'
-import { cotizar, FEE, RATE, TASA_FIJA_MIN } from '../../data/config'
+import { cotizar, MARGEN, RATE, RATE_REF, TASA_FIJA_MIN, usdcPara } from '../../data/config'
 import { useI18n } from '../../i18n'
 
 const limpiar = (v) => v.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1').slice(0, 9)
@@ -25,8 +25,7 @@ export default function Cotizar({ nav, state, setState }) {
   const cambiarBs = (v) => {
     const s = limpiar(v)
     setTextoBs(s)
-    const usd = (Number(s) || 0) / (RATE * (1 - FEE))
-    setState((st) => ({ ...st, usd: Math.round(usd * 100) / 100 }))
+    setState((st) => ({ ...st, usd: usdcPara(Number(s) || 0) }))
   }
 
   return (
@@ -38,7 +37,7 @@ export default function Cotizar({ nav, state, setState }) {
           <span className="overline">{t('cotizar.tipo')}</span>
           <Chip>{t('cotizar.fija', { time: tiempo })}</Chip>
         </div>
-        <strong className="display-m">1 USD = {RATE} Bs</strong>
+        <strong className="display-m">1 USDC = {RATE} Bs</strong>
         <span className="body-s muted">{t('cotizar.fijaNota')}</span>
       </div>
 
@@ -94,19 +93,17 @@ export default function Cotizar({ nav, state, setState }) {
       </div>
 
       <div className="glass card stack-10 entra" style={{ '--i': 1 }}>
-        <Row label={t('cotizar.tipo')} value={`1 USD = ${RATE} Bs`} />
+        <Row label={t('cotizar.tipo')} value={`1 USDC = ${RATE} Bs`} />
         <Row label={t('cotizar.comision')} value={bs(q.comision)} />
-        <Row label={t('cotizar.red')} value="< Bs 0.01" />
+        <Row label={t('cotizar.red')} value={t('comun.gratis')} tone="teal" />
         <hr className="divisor" />
         <Row label={t('cotizar.total')} value={bs(q.efectivo)} strong tone="terra" />
       </div>
 
-      {q.ahorro > 0 && (
-        <div className="nota nota--verde flota flota--suave">
-          <Check size={18} aria-hidden="true" />
-          <span>{t('cotizar.ahorro', { amount: bs(q.ahorro) })}</span>
-        </div>
-      )}
+      <div className="nota nota--verde flota flota--suave">
+        <Check size={18} aria-hidden="true" />
+        <span>{t('cotizar.referencia', { ref: num(RATE_REF), margen: MARGEN * 100 })}</span>
+      </div>
 
       <Button disabled={q.usd <= 0} onClick={() => nav.go('cajeros')}>
         {t('cotizar.elegir')}

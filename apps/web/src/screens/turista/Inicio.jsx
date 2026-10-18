@@ -81,7 +81,7 @@ export default function Inicio({ nav, state, setState }) {
         </span>
         <span className="tasa-pill__texto">
           <span className="label-s muted">{t('inicio.tasa')}</span>
-          <strong className="label-m">1 USD = {RATE} Bs</strong>
+          <strong className="label-m">1 USDC = {RATE} Bs</strong>
         </span>
         <Chip>{t('inicio.envivo')}</Chip>
       </button>

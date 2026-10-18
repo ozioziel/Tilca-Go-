@@ -27,7 +27,7 @@ export default function Bienvenida({ nav, setState }) {
           <Tilcayo pose="feliz" className="asoma asoma--derecha brinca" />
           <div className="glass card flota flota--lenta">
             <span className="overline">{t('bienv.tasaHoy')}</span>
-            <strong className="display-m">1 USD = {RATE} Bs</strong>
+            <strong className="display-m">1 USDC = {RATE} Bs</strong>
             <span className="body-s muted">{t('bienv.tasaNota')}</span>
           </div>
         </div>

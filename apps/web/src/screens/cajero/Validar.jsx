@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Check, ExternalLink } from 'lucide-react'
-import Tilcayo from '../../components/Tilcayo'
 import { Button, Chip, Header, Row } from '../../components/ui'
 import { useTimers } from '../../components/hooks'
 import { cotizar, liquidacionCajero, ORDER_CODE, STELLAR_EXPLORER, STELLAR_TX, TURISTA } from '../../data/config'
@@ -10,13 +9,14 @@ export default function Validar({ nav, toast }) {
   const { t, bs, num } = useI18n()
   const later = useTimers()
   const [revisado, setRevisado] = useState(false)
-  const [entregado, setEntregado] = useState(false)
+  const [iniciando, setIniciando] = useState(false)
   const q = cotizar(100)
   const l = liquidacionCajero(100)
 
-  const confirmar = () => {
-    setEntregado(true)
-    later(() => nav.go('inicio', { root: true }), 1600)
+  // Firma `start_handover`: desde aquí el turista ya no puede pedir un reembolso unilateral
+  const iniciar = () => {
+    setIniciando(true)
+    later(() => nav.go('entregaCajero'), 1100)
   }
 
   return (
@@ -49,7 +49,7 @@ export default function Validar({ nav, toast }) {
             {STELLAR_TX.slice(0, 4)}…{STELLAR_TX.slice(-4)} <ExternalLink size={13} aria-hidden="true" />
           </a>
         </div>
-        <p className="label-s muted">{t('validar.nota')}</p>
+        <p className="label-s muted">{t('validar.nota', { fee: num(l.comisionAgente) })}</p>
       </div>
 
       <label className="casilla">
@@ -61,23 +61,13 @@ export default function Validar({ nav, toast }) {
       </label>
 
       <div className="stack-10">
-        <Button disabled={!revisado || entregado} onClick={confirmar}>
-          {t('validar.confirmar')}
+        <Button disabled={!revisado || iniciando} onClick={iniciar} className={iniciando ? 'is-cargando' : ''} icon={!iniciando}>
+          {iniciando ? t('validar.iniciando') : t('validar.confirmar')}
         </Button>
         <Button variant="secondary" icon={false} onClick={() => toast(t('comun.pronto'))}>
           {t('validar.reportar')}
         </Button>
       </div>
-
-      {entregado && (
-        <div className="exito" role="status">
-          <div className="exito__caja glass">
-            <Tilcayo pose="feliz" className="exito__gato brinca" />
-            <strong className="display-m">{t('validar.entregado')}</strong>
-            <span className="body-s muted">{t('validar.entregadoTxt')}</span>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

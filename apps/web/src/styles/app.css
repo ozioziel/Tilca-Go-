@@ -1417,3 +1417,52 @@
   font: 600 12px / 1 var(--font);
   color: var(--muted);
 }
+
+/* ---------- Métodos fuera del MVP ---------- */
+.metodo.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---------- Pasos de la entrega en el mostrador ---------- */
+.pasos-entrega {
+  width: 100%;
+  margin: 0;
+  padding: 0 4px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pasos-entrega__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+}
+.pasos-entrega__item.is-hecho,
+.pasos-entrega__item.is-activo {
+  color: var(--ink);
+}
+.pasos-entrega__punto {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--teal);
+  border-radius: 50%;
+  color: #fff;
+}
+.pasos-entrega__item.is-hecho .pasos-entrega__punto {
+  background: var(--teal);
+}
+.pasos-entrega__item.is-activo .pasos-entrega__punto {
+  animation: latido 1.2s ease-in-out infinite;
+}
+@keyframes latido {
+  50% { box-shadow: 0 0 0 5px var(--teal-soft); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pasos-entrega__item.is-activo .pasos-entrega__punto { animation: none; }
+}

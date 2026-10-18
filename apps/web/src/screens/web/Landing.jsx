@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import {
-  ArrowRight, ArrowUpDown, Bitcoin, Check, ChevronDown, CreditCard, DollarSign, Eye, Globe, MapPin,
+  ArrowRight, ArrowUpDown, Check, ChevronDown, DollarSign, Eye, Globe, Layers, MapPin,
   Navigation, Percent, QrCode, Search, ShieldCheck, Star, Wallet, Zap,
 } from 'lucide-react'
 import Tilcayo from '../../components/Tilcayo'
 import Mapa from '../../components/Mapa'
 import { Onda } from '../../components/Paisaje'
 import { Button, Chip, Logo } from '../../components/ui'
-import { AEROPUERTO_FEE, CAJEROS, cotizar, RATE, REMESADORA_FEE } from '../../data/config'
+import { CAJEROS, cotizar, MARGEN, RATE, RATE_REF } from '../../data/config'
 import { useI18n } from '../../i18n'
 
 const irA = (hash) => () => {
@@ -18,13 +18,14 @@ export default function Landing() {
   const { t, lang, setLang, bs, num } = useI18n()
   const [usd, setUsd] = useState('100')
   const q = cotizar(Number(usd) || 0)
-  const bruto100 = 100 * RATE
+  // Desglose de la cotización de ejemplo para 100 USDC: referencia, margen y comisión
+  const q100 = cotizar(100)
   const barras = [
-    { nombre: 'TilcaGo', valor: bruto100 * 0.015, tilcago: true },
-    { nombre: t('web.remesadora'), valor: bruto100 * REMESADORA_FEE },
-    { nombre: t('web.aeropuerto'), valor: bruto100 * AEROPUERTO_FEE },
+    { nombre: t('web.desgloseRef', { ref: num(RATE_REF) }), valor: q100.referencia, texto: bs(q100.referencia), tilcago: true },
+    { nombre: t('web.desgloseMargen', { margen: MARGEN * 100 }), valor: q100.margen, texto: `− ${bs(q100.margen)}` },
+    { nombre: t('web.desgloseComision', { fee: num(q100.comisionUsdc) }), valor: q100.comision, texto: `− ${bs(q100.comision)}` },
   ]
-  const maxBarra = Math.max(...barras.map((b) => b.valor))
+  const maxBarra = q100.referencia
   const pasos = [
     { n: '01', Icon: Eye, t: 'web.paso1t', d: 'web.paso1d' },
     { n: '02', Icon: MapPin, t: 'web.paso2t', d: 'web.paso2d' },
@@ -100,17 +101,16 @@ export default function Landing() {
               </div>
             </div>
             <div className="stack-8">
-              <div className="row"><span className="row__label">{t('cotizar.tipo')}</span><span className="row__value">1 USD = {RATE} Bs</span></div>
+              <div className="row"><span className="row__label">{t('cotizar.tipo')}</span><span className="row__value">1 USDC = {RATE} Bs</span></div>
               <div className="row"><span className="row__label">{t('cotizar.comision')}</span><span className="row__value">{bs(q.comision)}</span></div>
+              <div className="row"><span className="row__label">{t('cotizar.red')}</span><span className="row__value text-teal">{t('comun.gratis')}</span></div>
               <div className="row row--strong"><span className="row__label">{t('cotizar.total')}</span><span className="row__value text-terra">{bs(q.efectivo)}</span></div>
             </div>
-            {q.ahorro > 0 && (
-              <div className="nota nota--verde"><Check size={18} aria-hidden="true" /><span>{t('cotizar.ahorro', { amount: bs(q.ahorro) })}</span></div>
-            )}
+            <div className="nota nota--verde"><Check size={18} aria-hidden="true" /><span>{t('cotizar.referencia', { ref: num(RATE_REF), margen: MARGEN * 100 })}</span></div>
             <Button onClick={irA('#/app')}>{t('web.continuar')}</Button>
             <div className="paga-con">
               <span className="label-s muted">{t('web.pagaCon')}</span>
-              {[[DollarSign, 'USDC'], [DollarSign, 'USDT'], [Bitcoin, 'BTC'], [CreditCard, 'Tarjeta']].map(([Icon, l]) => (
+              {[[DollarSign, 'USDC'], [Layers, t('web.pronto')]].map(([Icon, l]) => (
                 <span key={l} className="paga-con__chip"><Icon size={13} aria-hidden="true" /> {l}</span>
               ))}
             </div>
@@ -152,7 +152,7 @@ export default function Landing() {
             <p className="body-m">{t('web.stellarTexto')}</p>
           </div>
           <div className="stellar__datos">
-            {[[Zap, '~5 s', t('web.st1')], [Percent, '< Bs 0.01', t('web.st2')], [ShieldCheck, t('web.st3v'), t('web.st3')]].map(([Icon, v, l], i) => (
+            {[[Zap, '~5 s', t('web.st1')], [Percent, 'Bs 0', t('web.st2')], [ShieldCheck, t('web.st3v'), t('web.st3')]].map(([Icon, v, l], i) => (
               <div key={v} className="stellar__dato flota flota--suave" style={{ '--retraso': `${i * 0.6}s` }}>
                 <span className="stellar__icono"><Icon size={20} aria-hidden="true" /></span>
                 <span><strong className="h-s">{v}</strong><span className="body-s">{l}</span></span>
@@ -176,19 +176,19 @@ export default function Landing() {
         <div className="comparacion-wrap">
           <Tilcayo pose="asomado" className="asoma asoma--derecha brinca" />
           <div className="comparacion glass">
-            <h3 className="h-xs">{t('web.cuanto')}</h3>
+            <h3 className="h-xs">{t('web.cuanto', { usd: 100 })}</h3>
             {barras.map((b, i) => (
               <div key={b.nombre} className="barra">
                 <div className="entre">
                   <span className={`label-m ${b.tilcago ? '' : 'muted'}`}>{b.nombre}</span>
-                  <span className={`label-m ${b.tilcago ? 'text-terra' : ''}`}>{bs(b.valor)}</span>
+                  <span className={`label-m ${b.tilcago ? 'text-terra' : ''}`}>{b.texto}</span>
                 </div>
                 <span className="barra__pista">
-                  <span className={`barra__valor ${b.tilcago ? 'is-tilcago' : ''}`} style={{ width: `${(b.valor / maxBarra) * 100}%`, '--i': i }} />
+                  <span className={`barra__valor ${b.tilcago ? 'is-tilcago' : ''}`} style={{ width: `${Math.max((b.valor / maxBarra) * 100, 2)}%`, '--i': i }} />
                 </span>
               </div>
             ))}
-            <p className="label-s muted">{t('web.ref')}</p>
+            <p className="label-s muted">{t('web.ref', { amount: bs(q100.efectivo) })}</p>
           </div>
         </div>
       </section>

@@ -4,12 +4,14 @@ import PhoneApp from '../../components/PhoneApp'
 import InicioCajero from './InicioCajero'
 import Escanear from './Escanear'
 import Validar from './Validar'
+import EntregaCajero from './EntregaCajero'
 import Ganancias from './Ganancias'
 
 const SCREENS = {
   inicio: InicioCajero,
   escanear: Escanear,
   validar: Validar,
+  entregaCajero: EntregaCajero,
   ganancias: Ganancias,
 }
 

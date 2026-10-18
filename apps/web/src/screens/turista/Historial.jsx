@@ -31,7 +31,7 @@ export default function Historial({ nav, toast }) {
 
       <div className="glass card stack-4 flota flota--suave">
         <span className="overline">{t('hist.mes')}</span>
-        <strong className="display-m">Bs 1,371.12</strong>
+        <strong className="display-m">Bs 1,960.15</strong>
         <span className="body-s muted">{t('hist.retirados')}</span>
         <Chip className="mt-8">{t('hist.ahorraste')}</Chip>
       </div>

@@ -1,7 +1,9 @@
+import { useEffect } from 'react'
 import { Copy, ExternalLink, X } from 'lucide-react'
 import Tilcayo from '../../components/Tilcayo'
 import { Listo, QRCode } from '../../components/QR'
 import { Button, Chip, Header, Row } from '../../components/ui'
+import { useTimers } from '../../components/hooks'
 import { CAJEROS, cotizar, ORDER_CODE, STELLAR_EXPLORER, STELLAR_TX } from '../../data/config'
 import { useI18n } from '../../i18n'
 
@@ -9,6 +11,16 @@ export default function Codigo({ nav, state, toast }) {
   const { t, bs } = useI18n()
   const q = cotizar(state.usd)
   const cajero = CAJEROS.find((c) => c.id === state.cajeroId) ?? CAJEROS[0]
+  const later = useTimers()
+
+  // Simulación: después de que el cajero escanea el código, empieza la entrega en el mostrador
+  useEffect(() => {
+    later(() => {
+      toast(t('codigo.escaneadoAviso'))
+      nav.go('entrega')
+    }, 4600)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const copiar = async () => {
     try {

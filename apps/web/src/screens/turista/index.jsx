@@ -8,6 +8,7 @@ import Cotizar from './Cotizar'
 import Cajeros from './Cajeros'
 import Pagar from './Pagar'
 import Codigo from './Codigo'
+import Entrega from './Entrega'
 import Historial from './Historial'
 import Perfil from './Perfil'
 
@@ -19,6 +20,7 @@ const SCREENS = {
   cajeros: Cajeros,
   pagar: Pagar,
   codigo: Codigo,
+  entrega: Entrega,
   historial: Historial,
   perfil: Perfil,
 }
@@ -38,6 +40,6 @@ const TABS = {
 }
 
 export default function TuristaApp() {
-  const [state, setState] = useState({ usd: 100, cajeroId: 'sc', metodo: 'usdc', introPending: false, saldoOculto: false })
+  const [state, setState] = useState({ usd: 100, cajeroId: 'sc', introPending: false, saldoOculto: false })
   return <PhoneApp screens={SCREENS} initial="bienvenida" tabs={TABS} state={state} setState={setState} />
 }
