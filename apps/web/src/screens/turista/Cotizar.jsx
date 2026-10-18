@@ -1,21 +1,23 @@
 import { useState } from 'react'
 import { ArrowUpDown, Check, ChevronDown, DollarSign, Wallet } from 'lucide-react'
 import { Button, Chip, Header, Row } from '../../components/ui'
-import { useCountdown } from '../../components/hooks'
-import { cotizar, MARGEN, RATE, RATE_REF, TASA_FIJA_MIN, usdcPara } from '../../data/config'
+import { errorText, useBackend } from '../../lib/backend'
+import { cotizarCon, usdcParaCon } from '../../lib/quote'
 import { useI18n } from '../../i18n'
 
 const limpiar = (v) => v.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1').slice(0, 9)
 
 export default function Cotizar({ nav, state, setState }) {
   const { t, bs, num } = useI18n()
-  const tiempo = useCountdown(TASA_FIJA_MIN * 60 - 18)
+  const { rate, api, offline } = useBackend()
   // Se puede escribir en dólares o en bolivianos; el botón del medio cambia el campo editable
   const [enBs, setEnBs] = useState(false)
   const [giro, setGiro] = useState(0)
-  const [textoBs, setTextoBs] = useState(() => cotizar(state.usd).efectivo.toFixed(2))
+  const [textoBs, setTextoBs] = useState(() => cotizarCon(rate, state.usd).efectivo.toFixed(2))
   const [textoUsd, setTextoUsd] = useState(() => String(state.usd))
-  const q = cotizar(state.usd)
+  const [cargando, setCargando] = useState(false)
+  const [error, setError] = useState('')
+  const q = cotizarCon(rate, state.usd)
 
   const cambiarUsd = (v) => {
     const s = limpiar(v)
@@ -25,7 +27,21 @@ export default function Cotizar({ nav, state, setState }) {
   const cambiarBs = (v) => {
     const s = limpiar(v)
     setTextoBs(s)
-    setState((st) => ({ ...st, usd: usdcPara(Number(s) || 0) }))
+    setState((st) => ({ ...st, usd: usdcParaCon(rate, Number(s) || 0) }))
+  }
+
+  // Fija la cotización en el servidor por 10 minutos y sigue a elegir cajero
+  const continuar = async () => {
+    setCargando(true)
+    setError('')
+    try {
+      const quote = await api('GET', `/quotes?amount_usdc=${q.usd}`)
+      setState((s) => ({ ...s, quote, order: null, withdrawal: null }))
+      nav.go('cajeros')
+    } catch (err) {
+      setError(errorText(err))
+      setCargando(false)
+    }
   }
 
   return (
@@ -35,9 +51,9 @@ export default function Cotizar({ nav, state, setState }) {
       <div className="glass card stack-4 entra" style={{ '--i': 0 }}>
         <div className="entre">
           <span className="overline">{t('cotizar.tipo')}</span>
-          <Chip>{t('cotizar.fija', { time: tiempo })}</Chip>
+          <Chip tone={offline ? 'beige' : 'verde'}>{offline ? t('cotizar.ejemplo') : t('inicio.envivo')}</Chip>
         </div>
-        <strong className="display-m">1 USDC = {RATE} Bs</strong>
+        <strong className="display-m">1 USDC = {q.aplicada} Bs</strong>
         <span className="body-s muted">{t('cotizar.fijaNota')}</span>
       </div>
 
@@ -93,7 +109,7 @@ export default function Cotizar({ nav, state, setState }) {
       </div>
 
       <div className="glass card stack-10 entra" style={{ '--i': 1 }}>
-        <Row label={t('cotizar.tipo')} value={`1 USDC = ${RATE} Bs`} />
+        <Row label={t('cotizar.tipo')} value={`1 USDC = ${q.aplicada} Bs`} />
         <Row label={t('cotizar.comision')} value={bs(q.comision)} />
         <Row label={t('cotizar.red')} value={t('comun.gratis')} tone="teal" />
         <hr className="divisor" />
@@ -102,10 +118,12 @@ export default function Cotizar({ nav, state, setState }) {
 
       <div className="nota nota--verde flota flota--suave">
         <Check size={18} aria-hidden="true" />
-        <span>{t('cotizar.referencia', { ref: num(RATE_REF), margen: MARGEN * 100 })}</span>
+        <span>{t('cotizar.referencia', { ref: num(q.ref), margen: q.margen * 100 })}</span>
       </div>
 
-      <Button disabled={q.usd <= 0} onClick={() => nav.go('cajeros')}>
+      {error && <p className="nota nota--error" role="alert">{error}</p>}
+
+      <Button disabled={q.usd <= 0 || cargando} onClick={continuar} className={cargando ? 'is-cargando' : ''} icon={!cargando}>
         {t('cotizar.elegir')}
       </Button>
     </div>

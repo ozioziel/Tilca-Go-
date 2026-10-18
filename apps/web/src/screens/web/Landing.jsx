@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   ArrowRight, ArrowUpDown, Check, ChevronDown, DollarSign, Eye, Globe, Layers, MapPin,
   Navigation, Percent, QrCode, Search, ShieldCheck, Star, Wallet, Zap,
@@ -7,7 +7,9 @@ import Tilcayo from '../../components/Tilcayo'
 import Mapa from '../../components/Mapa'
 import { Onda } from '../../components/Paisaje'
 import { Button, Chip, Logo } from '../../components/ui'
-import { CAJEROS, cotizar, MARGEN, RATE, RATE_REF } from '../../data/config'
+import { CAJEROS } from '../../data/config'
+import { request } from '../../lib/api'
+import { cotizarCon } from '../../lib/quote'
 import { useI18n } from '../../i18n'
 
 const irA = (hash) => () => {
@@ -17,12 +19,17 @@ const irA = (hash) => () => {
 export default function Landing() {
   const { t, lang, setLang, bs, num } = useI18n()
   const [usd, setUsd] = useState('100')
-  const q = cotizar(Number(usd) || 0)
+  // Tasa vigente del API; sin conexión usa la cotización de ejemplo
+  const [rate, setRate] = useState(null)
+  useEffect(() => {
+    request('GET', '/rate').then(setRate).catch(() => {})
+  }, [])
+  const q = cotizarCon(rate, Number(usd) || 0)
   // Desglose de la cotización de ejemplo para 100 USDC: referencia, margen y comisión
-  const q100 = cotizar(100)
+  const q100 = cotizarCon(rate, 100)
   const barras = [
-    { nombre: t('web.desgloseRef', { ref: num(RATE_REF) }), valor: q100.referencia, texto: bs(q100.referencia), tilcago: true },
-    { nombre: t('web.desgloseMargen', { margen: MARGEN * 100 }), valor: q100.margen, texto: `− ${bs(q100.margen)}` },
+    { nombre: t('web.desgloseRef', { ref: num(q100.ref) }), valor: q100.referencia, texto: bs(q100.referencia), tilcago: true },
+    { nombre: t('web.desgloseMargen', { margen: q100.margen * 100 }), valor: q100.margenBs, texto: `− ${bs(q100.margenBs)}` },
     { nombre: t('web.desgloseComision', { fee: num(q100.comisionUsdc) }), valor: q100.comision, texto: `− ${bs(q100.comision)}` },
   ]
   const maxBarra = q100.referencia
@@ -101,12 +108,12 @@ export default function Landing() {
               </div>
             </div>
             <div className="stack-8">
-              <div className="row"><span className="row__label">{t('cotizar.tipo')}</span><span className="row__value">1 USDC = {RATE} Bs</span></div>
+              <div className="row"><span className="row__label">{t('cotizar.tipo')}</span><span className="row__value">1 USDC = {q.aplicada} Bs</span></div>
               <div className="row"><span className="row__label">{t('cotizar.comision')}</span><span className="row__value">{bs(q.comision)}</span></div>
               <div className="row"><span className="row__label">{t('cotizar.red')}</span><span className="row__value text-teal">{t('comun.gratis')}</span></div>
               <div className="row row--strong"><span className="row__label">{t('cotizar.total')}</span><span className="row__value text-terra">{bs(q.efectivo)}</span></div>
             </div>
-            <div className="nota nota--verde"><Check size={18} aria-hidden="true" /><span>{t('cotizar.referencia', { ref: num(RATE_REF), margen: MARGEN * 100 })}</span></div>
+            <div className="nota nota--verde"><Check size={18} aria-hidden="true" /><span>{t('cotizar.referencia', { ref: num(q.ref), margen: q.margen * 100 })}</span></div>
             <Button onClick={irA('#/app')}>{t('web.continuar')}</Button>
             <div className="paga-con">
               <span className="label-s muted">{t('web.pagaCon')}</span>

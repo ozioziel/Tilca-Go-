@@ -1,47 +1,73 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Copy, ExternalLink, X } from 'lucide-react'
 import Tilcayo from '../../components/Tilcayo'
-import { Listo, QRCode } from '../../components/QR'
+import { Listo, RealQR } from '../../components/QR'
 import { Button, Chip, Header, Row } from '../../components/ui'
-import { useTimers } from '../../components/hooks'
-import { CAJEROS, cotizar, ORDER_CODE, STELLAR_EXPLORER, STELLAR_TX } from '../../data/config'
+import { errorText, useBackend, usePolling } from '../../lib/backend'
 import { useI18n } from '../../i18n'
 
-export default function Codigo({ nav, state, toast }) {
-  const { t, bs } = useI18n()
-  const q = cotizar(state.usd)
-  const cajero = CAJEROS.find((c) => c.id === state.cajeroId) ?? CAJEROS[0]
-  const later = useTimers()
+/**
+ * Código de retiro (QR + PIN). El código solo identifica la orden; el pago se libera
+ * cuando el turista firma en el mostrador. Cuando el cajero inicia la entrega
+ * (la orden pasa a IN_HANDOVER) la app avanza sola a la pantalla de entrega.
+ */
+export default function Codigo({ nav, state, setState, toast }) {
+  const { t, bs, lang } = useI18n()
+  const { api } = useBackend()
+  const [error, setError] = useState('')
+  const order = state.order
+  const w = state.withdrawal
+  const avanzo = useRef(false)
 
-  // Simulación: después de que el cajero escanea el código, empieza la entrega en el mostrador
+  // Si se entra desde el historial, se emite un código nuevo (el anterior queda revocado)
   useEffect(() => {
-    later(() => {
-      toast(t('codigo.escaneadoAviso'))
-      nav.go('entrega')
-    }, 4600)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    if (!order || w || order.status !== 'PAID_IN_ESCROW') return
+    api('POST', `/orders/${order.id}/withdrawal-code`)
+      .then((withdrawal) => setState((s) => ({ ...s, withdrawal })))
+      .catch((err) => setError(errorText(err)))
+  }, [order, w, api, setState])
+
+  usePolling(
+    async () => {
+      if (!order) return
+      const { order: fresh } = await api('GET', `/orders/${order.id}`)
+      setState((s) => ({ ...s, order: fresh }))
+      if (fresh.status === 'IN_HANDOVER' && !avanzo.current) {
+        avanzo.current = true
+        toast(t('codigo.escaneadoAviso'))
+        nav.go('entrega', { replace: true })
+      }
+    },
+    3000,
+    Boolean(order),
+  )
+
+  if (!order) {
+    return (
+      <div className="pantalla">
+        <Header title={t('pantalla.codigo')} onBack={nav.back} />
+        <p className="body-m muted centrado">{t('codigo.sinOrden')}</p>
+        <Button onClick={() => nav.go('cotizar')}>{t('inicio.retirar')}</Button>
+      </div>
+    )
+  }
+
+  const escaneado = order.withdrawal?.status === 'REDEEMED'
+  const deposito = order.transactions.find((x) => x.kind === 'deposit' && x.status === 'SUCCESS')
+  const vence = new Date(order.expiry).toLocaleTimeString(lang === 'en' ? 'en-US' : 'es-BO', { hour: '2-digit', minute: '2-digit' })
 
   const copiar = async () => {
     try {
-      await navigator.clipboard.writeText(ORDER_CODE)
+      await navigator.clipboard.writeText(w?.code ?? '')
     } catch {
       /* algunos navegadores bloquean el portapapeles; igual avisamos */
     }
     toast(t('comun.copiado'))
   }
 
-  const compartir = async () => {
-    const texto = `TilcaGo · ${ORDER_CODE} · ${bs(q.efectivo)} · ${cajero.nombre}`
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'TilcaGo', text: texto })
-        return
-      } catch {
-        /* la persona canceló */
-      }
-    }
-    copiar()
+  const comoLlegar = () => {
+    const q = encodeURIComponent(`${order.agent.address}, La Paz, Bolivia`)
+    window.open(`https://www.google.com/maps/search/?api=1&query=${q}`, '_blank', 'noreferrer')
   }
 
   return (
@@ -62,33 +88,36 @@ export default function Codigo({ nav, state, toast }) {
 
       <div className="ticket glass">
         <div className="ticket__qr">
-          <QRCode seed={11} />
-          <span className="ticket__sello">TG</span>
-          <span className="laser" aria-hidden="true" />
-          <Listo title={t('codigo.listo')} sub={t('codigo.escaneado')} className="listo--tarde" />
+          {w ? <RealQR text={w.qr_payload} /> : <span className="ticket__cargando" />}
+          {escaneado && <Listo title={t('codigo.listo')} sub={t('codigo.escaneado')} />}
         </div>
         <button type="button" className="ticket__codigo" onClick={copiar} aria-label={t('comun.copiado')}>
-          <span className="display-m">{ORDER_CODE}</span>
+          <span className="display-m">{w?.code ?? '···-···'}</span>
           <Copy size={18} aria-hidden="true" />
         </button>
         <hr className="ticket__corte" />
         <div className="stack-10">
-          <Row label={t('codigo.monto')} value={bs(q.efectivo)} />
-          <Row label={t('codigo.cajero')} value={cajero.nombre} />
-          <Row label={t('codigo.valido')} value={t('codigo.hoy')} />
-          <div className="row">
-            <span className="row__label">{t('codigo.tx')}</span>
-            <a className="link fila-icono" href={`${STELLAR_EXPLORER}/tx/${STELLAR_TX}`} target="_blank" rel="noreferrer">
-              {STELLAR_TX.slice(0, 4)}…{STELLAR_TX.slice(-4)} · stellar.expert <ExternalLink size={13} aria-hidden="true" />
-            </a>
-          </div>
+          <Row label={t('codigo.monto')} value={bs(Number(order.net_bob))} />
+          <Row label={t('codigo.cajero')} value={order.agent.name} />
+          <Row label="PIN" value={w?.pin ?? '······'} />
+          <Row label={t('codigo.valido')} value={vence} />
+          {deposito && (
+            <div className="row">
+              <span className="row__label">{t('codigo.tx')}</span>
+              <a className="link fila-icono" href={deposito.url} target="_blank" rel="noreferrer">
+                {deposito.tx_hash.slice(0, 4)}…{deposito.tx_hash.slice(-4)} · stellar.expert <ExternalLink size={13} aria-hidden="true" />
+              </a>
+            </div>
+          )}
         </div>
       </div>
 
+      {error && <p className="nota nota--error" role="alert">{error}</p>}
+
       <div className="stack-10">
-        <Button onClick={() => nav.go('cajeros')}>{t('codigo.llegar')}</Button>
-        <Button variant="secondary" icon={false} onClick={compartir}>
-          {t('codigo.compartir')}
+        <Button onClick={comoLlegar}>{t('codigo.llegar')}</Button>
+        <Button variant="secondary" icon={false} onClick={copiar}>
+          {t('codigo.copiar')}
         </Button>
       </div>
     </div>

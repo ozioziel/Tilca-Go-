@@ -24,15 +24,3 @@ export function useTimers() {
     return id
   }
 }
-
-/** Cuenta regresiva en segundos (para la tasa fijada). */
-export function useCountdown(seconds) {
-  const [left, setLeft] = useState(seconds)
-  useEffect(() => {
-    const id = setInterval(() => setLeft((s) => (s > 0 ? s - 1 : 0)), 1000)
-    return () => clearInterval(id)
-  }, [])
-  const mm = String(Math.floor(left / 60)).padStart(2, '0')
-  const ss = String(left % 60).padStart(2, '0')
-  return `${mm}:${ss}`
-}

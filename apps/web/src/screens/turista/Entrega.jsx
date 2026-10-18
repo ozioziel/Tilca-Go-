@@ -1,45 +1,72 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ExternalLink, X } from 'lucide-react'
 import Tilcayo from '../../components/Tilcayo'
 import PasosEntrega from '../../components/PasosEntrega'
 import { Button, Chip, Header, Row } from '../../components/ui'
-import { useTimers } from '../../components/hooks'
-import { CAJEROS, cotizar, STELLAR_EXPLORER, STELLAR_TX, STELLAR_TX_RELEASE } from '../../data/config'
+import { errorText, useBackend, usePolling } from '../../lib/backend'
 import { useI18n } from '../../i18n'
 
 /**
  * Entrega en el mostrador (lado del turista). El orden es la regla central de la v3:
  * el cajero cuenta el efectivo a la vista → el turista firma `release` →
  * el cajero ve el pago confirmado on-chain → recién entonces entrega los billetes.
- *
- * fase: contando → verificar → firmando → liberado
  */
-export default function Entrega({ nav, state, toast }) {
-  const { t, bs } = useI18n()
-  const later = useTimers()
-  const [fase, setFase] = useState('contando')
-  const q = cotizar(state.usd)
-  const cajero = CAJEROS.find((c) => c.id === state.cajeroId) ?? CAJEROS[0]
-  const monto = bs(q.efectivo)
-  const liberado = fase === 'liberado'
-  const tx = liberado ? STELLAR_TX_RELEASE : STELLAR_TX
+export default function Entrega({ nav, state, setState, toast }) {
+  const { t, bs, lang } = useI18n()
+  const { api, sendTx } = useBackend()
+  const [fase, setFase] = useState('') // preparando | firmando | enviando
+  const [error, setError] = useState('')
+  const order = state.order
 
-  // Simulación: el cajero termina de contar a los pocos segundos
-  useEffect(() => {
-    later(() => setFase('verificar'), 2200)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  usePolling(
+    async () => {
+      if (!order) return
+      const { order: fresh } = await api('GET', `/orders/${order.id}`)
+      setState((s) => ({ ...s, order: fresh }))
+    },
+    3000,
+    Boolean(order) && !['SETTLED', 'REFUNDED'].includes(order?.status),
+  )
 
-  const firmar = () => {
-    setFase('firmando')
-    later(() => setFase('liberado'), 1500)
+  if (!order) {
+    return (
+      <div className="pantalla">
+        <Header title={t('pantalla.entrega')} onBack={nav.back} />
+        <p className="body-m muted centrado">{t('codigo.sinOrden')}</p>
+      </div>
+    )
+  }
+
+  const liberado = order.status === 'SETTLED'
+  const disputa = order.status === 'DISPUTED'
+  const enEntrega = order.status === 'IN_HANDOVER'
+  const monto = bs(Number(order.net_bob))
+  const release = order.transactions.find((x) => x.kind === 'release' && x.status === 'SUCCESS')
+  const tx = release ?? order.transactions.find((x) => x.status === 'SUCCESS')
+  const hora = release ? new Date(release.created_at).toLocaleTimeString(lang === 'en' ? 'en-US' : 'es-BO', { hour: '2-digit', minute: '2-digit' }) : ''
+
+  const firmar = async (action, body) => {
+    setError('')
+    try {
+      const res = await sendTx(order.id, action, body, setFase)
+      setState((s) => ({ ...s, order: res.order }))
+      if (action === 'open_dispute') toast(t('entrega.reportado'))
+    } catch (err) {
+      setError(errorText(err))
+    } finally {
+      setFase('')
+    }
   }
 
   const pasos = [
     { label: t('entrega.paso1'), hecho: true },
-    { label: fase === 'contando' ? t('entrega.paso2espera', { amount: monto }) : t('entrega.paso2', { amount: monto }), hecho: fase !== 'contando', activo: fase === 'contando' },
-    { label: liberado ? t('entrega.paso3ok', { time: '18:12' }) : t('entrega.paso3'), hecho: liberado, activo: fase === 'verificar' || fase === 'firmando' },
+    { label: liberado ? t('entrega.paso2', { amount: monto }) : t('entrega.paso2espera', { amount: monto }), hecho: liberado, activo: enEntrega },
+    { label: liberado ? t('entrega.paso3ok', { time: hora }) : t('entrega.paso3'), hecho: liberado, activo: enEntrega },
   ]
+
+  const titulo = liberado ? t('liberado.titulo') : disputa ? t('entrega.disputaTitulo') : t('entrega.titulo')
+  const texto = liberado ? t('liberado.texto') : disputa ? t('entrega.disputaTexto') : t('entrega.texto')
+  const chip = liberado ? t('liberado.chip') : disputa ? t('orden.DISPUTED') : t('entrega.chip')
 
   return (
     <div className="pantalla codigo">
@@ -51,10 +78,10 @@ export default function Entrega({ nav, state, toast }) {
         right={<span className="screen-header__spacer" />}
       />
       <div className="codigo__cabeza">
-        <Tilcayo pose="feliz" className="codigo__gato brinca" />
-        <Chip>{liberado ? t('liberado.chip') : t('entrega.chip')}</Chip>
-        <h1 className="display-m">{liberado ? t('liberado.titulo') : t('entrega.titulo')}</h1>
-        <p className="body-s muted">{liberado ? t('liberado.texto') : t('entrega.texto')}</p>
+        <Tilcayo pose={disputa ? 'asomado' : 'feliz'} className="codigo__gato brinca" />
+        <Chip tone={disputa ? 'terracota' : 'verde'}>{chip}</Chip>
+        <h1 className="display-m">{titulo}</h1>
+        <p className="body-s muted">{texto}</p>
       </div>
 
       <div className="ticket glass">
@@ -65,34 +92,37 @@ export default function Entrega({ nav, state, toast }) {
         <hr className="ticket__corte" />
         <div className="stack-10">
           <Row label={t('codigo.monto')} value={monto} />
-          <Row label={t('codigo.cajero')} value={cajero.nombre} />
-          <Row label={liberado ? t('liberado.liberado') : t('entrega.estado')} value={liberado ? 'Hoy, 18:12' : t('entrega.enEntrega')} />
-          <div className="row">
-            <span className="row__label">{t('codigo.tx')}</span>
-            <a className="link fila-icono" href={`${STELLAR_EXPLORER}/tx/${tx}`} target="_blank" rel="noreferrer">
-              {tx.slice(0, 4)}…{tx.slice(-4)} · stellar.expert <ExternalLink size={13} aria-hidden="true" />
-            </a>
-          </div>
+          <Row label={t('codigo.cajero')} value={order.agent.name} />
+          <Row label={t('entrega.estado')} value={t(`orden.${order.status}`)} />
+          {tx && (
+            <div className="row">
+              <span className="row__label">{t('codigo.tx')}</span>
+              <a className="link fila-icono" href={tx.url} target="_blank" rel="noreferrer">
+                {tx.tx_hash.slice(0, 4)}…{tx.tx_hash.slice(-4)} · stellar.expert <ExternalLink size={13} aria-hidden="true" />
+              </a>
+            </div>
+          )}
         </div>
       </div>
 
+      {error && <p className="nota nota--error" role="alert">{error}</p>}
+
       <div className="stack-10">
         {liberado ? (
+          <Button onClick={() => nav.go('historial', { root: true })}>{t('liberado.recibo')}</Button>
+        ) : enEntrega ? (
           <>
-            <Button onClick={() => nav.go('historial', { root: true })}>{t('liberado.recibo')}</Button>
-            <Button variant="secondary" icon={false} onClick={() => toast(t('comun.pronto'))}>
-              {t('liberado.disputa')}
+            <Button disabled={Boolean(fase)} onClick={() => firmar('release')} className={fase ? 'is-cargando' : ''} icon={!fase}>
+              {fase ? t(`pagar.fase.${fase}`) : t('entrega.firmar')}
             </Button>
-          </>
-        ) : (
-          <>
-            <Button disabled={fase !== 'verificar'} onClick={firmar} className={fase === 'firmando' ? 'is-cargando' : ''} icon={fase !== 'firmando'}>
-              {fase === 'firmando' ? t('entrega.firmando') : t('entrega.firmar')}
-            </Button>
-            <Button variant="secondary" icon={false} onClick={() => toast(t('entrega.reportado'))}>
+            <Button variant="secondary" icon={false} disabled={Boolean(fase)} onClick={() => firmar('open_dispute', { reason: 'Falta dinero en la entrega' })}>
               {t('entrega.falta')}
             </Button>
           </>
+        ) : (
+          <Button variant="secondary" icon={false} onClick={() => nav.go('inicio', { root: true })}>
+            {t('pantalla.inicio')}
+          </Button>
         )}
       </div>
     </div>

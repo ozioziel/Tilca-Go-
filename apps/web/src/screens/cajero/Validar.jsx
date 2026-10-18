@@ -1,22 +1,48 @@
 import { useState } from 'react'
 import { Check, ExternalLink } from 'lucide-react'
 import { Button, Chip, Header, Row } from '../../components/ui'
-import { useTimers } from '../../components/hooks'
-import { cotizar, liquidacionCajero, ORDER_CODE, STELLAR_EXPLORER, STELLAR_TX, TURISTA } from '../../data/config'
+import { errorText, useBackend } from '../../lib/backend'
+import { shortAddress } from '../../lib/wallet'
 import { useI18n } from '../../i18n'
 
-export default function Validar({ nav, toast }) {
-  const { t, bs, num } = useI18n()
-  const later = useTimers()
+/**
+ * Código válido: el cajero confirma que el turista está presente y firma
+ * `start_handover`. Desde ahí el turista ya no puede reembolsarse por su cuenta.
+ */
+export default function Validar({ nav, state, setState, toast }) {
+  const { t, bs, num, lang } = useI18n()
+  const { sendTx } = useBackend()
   const [revisado, setRevisado] = useState(false)
-  const [iniciando, setIniciando] = useState(false)
-  const q = cotizar(100)
-  const l = liquidacionCajero(100)
+  const [fase, setFase] = useState('')
+  const [error, setError] = useState('')
+  const o = state.order
 
-  // Firma `start_handover`: desde aquí el turista ya no puede pedir un reembolso unilateral
-  const iniciar = () => {
-    setIniciando(true)
-    later(() => nav.go('entregaCajero'), 1100)
+  if (!o) {
+    return (
+      <div className="pantalla">
+        <Header title={t('validar.titulo')} onBack={nav.back} />
+        <Button onClick={() => nav.go('escanear', { replace: true })}>{t('cajero.escanear')}</Button>
+      </div>
+    )
+  }
+
+  const deposito = o.transactions.find((x) => x.kind === 'deposit' && x.status === 'SUCCESS')
+  const reservada = new Date(o.created_at).toLocaleTimeString(lang === 'en' ? 'en-US' : 'es-BO', { hour: '2-digit', minute: '2-digit' })
+
+  const iniciar = async () => {
+    setError('')
+    try {
+      const res = await sendTx(o.id, 'start_handover', {}, setFase)
+      setState((s) => ({ ...s, order: res.order }))
+      nav.go('entregaCajero', { replace: true })
+    } catch (err) {
+      setError(errorText(err))
+      if (err.code === 'wrong_account' || err.code === 'not_connected') {
+        setState((s) => ({ ...s, despuesDeWallet: 'validar' }))
+      }
+    } finally {
+      setFase('')
+    }
   }
 
   return (
@@ -26,30 +52,32 @@ export default function Validar({ nav, toast }) {
 
       <div className="glass card stack-4 flota flota--suave">
         <span className="overline">{t('validar.entrega')}</span>
-        <strong className="display-l text-terra">{bs(q.efectivo)}</strong>
-        <span className="body-s muted">{t('validar.orden', { code: ORDER_CODE })}</span>
+        <strong className="display-l text-terra">{bs(Number(o.net_bob))}</strong>
+        <span className="body-s muted">{t('validar.orden', { code: o.id.slice(0, 8).toUpperCase(), time: reservada })}</span>
       </div>
 
       <div className="glass card perfil__tarjeta entra" style={{ '--i': 1 }}>
-        <span className="avatar avatar--chico">{TURISTA.iniciales}</span>
+        <span className="avatar avatar--chico">{o.tourist_email.slice(0, 1).toUpperCase()}</span>
         <span className="stack-4">
-          <strong className="label-m">{TURISTA.nombre}</strong>
-          <span className="body-s muted">{t('validar.pasaporte')}</span>
-          <Chip>{t('perfil.verificado')}</Chip>
+          <strong className="label-m">{o.tourist_email}</strong>
+          <span className="body-s muted">{t('validar.walletTurista', { address: shortAddress(o.tourist_wallet) })}</span>
+          <Chip>{t('validar.pagoProtegido')}</Chip>
         </span>
       </div>
 
       <div className="glass card stack-10 entra" style={{ '--i': 2 }}>
-        <Row label={t('validar.pago')} value={`${num(l.pago)} USDC`} />
-        <Row label={t('validar.comision')} value={`−${num(l.comisionTilcago)} USDC`} />
-        <Row label={t('validar.recibes')} value={`${num(l.recibe)} USDC`} strong tone="teal" />
-        <div className="row">
-          <span className="row__label">{t('validar.tx')}</span>
-          <a className="link fila-icono" href={`${STELLAR_EXPLORER}/tx/${STELLAR_TX}`} target="_blank" rel="noreferrer">
-            {STELLAR_TX.slice(0, 4)}…{STELLAR_TX.slice(-4)} <ExternalLink size={13} aria-hidden="true" />
-          </a>
-        </div>
-        <p className="label-s muted">{t('validar.nota', { fee: num(l.comisionAgente) })}</p>
+        <Row label={t('validar.pago')} value={`${num(o.amount_usdc)} USDC`} />
+        <Row label={t('validar.comision')} value={`−${num(o.platform_fee_usdc)} USDC`} />
+        <Row label={t('validar.recibes')} value={`${num(o.agent_receives_usdc)} USDC`} strong tone="teal" />
+        {deposito && (
+          <div className="row">
+            <span className="row__label">{t('validar.tx')}</span>
+            <a className="link fila-icono" href={deposito.url} target="_blank" rel="noreferrer">
+              {deposito.tx_hash.slice(0, 4)}…{deposito.tx_hash.slice(-4)} <ExternalLink size={13} aria-hidden="true" />
+            </a>
+          </div>
+        )}
+        <p className="label-s muted">{t('validar.nota', { fee: num(o.agent_fee_usdc) })}</p>
       </div>
 
       <label className="casilla">
@@ -60,9 +88,20 @@ export default function Validar({ nav, toast }) {
         <span className="body-s">{t('validar.check')}</span>
       </label>
 
+      {error && (
+        <p className="nota nota--error" role="alert">
+          {error}{' '}
+          {state.despuesDeWallet && (
+            <button type="button" className="link" onClick={() => nav.go('wallet')}>
+              {t('wallet.titulo')}
+            </button>
+          )}
+        </p>
+      )}
+
       <div className="stack-10">
-        <Button disabled={!revisado || iniciando} onClick={iniciar} className={iniciando ? 'is-cargando' : ''} icon={!iniciando}>
-          {iniciando ? t('validar.iniciando') : t('validar.confirmar')}
+        <Button disabled={!revisado || Boolean(fase) || o.status !== 'PAID_IN_ESCROW'} onClick={iniciar} className={fase ? 'is-cargando' : ''} icon={!fase}>
+          {fase ? t(`pagar.fase.${fase}`) : t('validar.confirmar')}
         </Button>
         <Button variant="secondary" icon={false} onClick={() => toast(t('comun.pronto'))}>
           {t('validar.reportar')}

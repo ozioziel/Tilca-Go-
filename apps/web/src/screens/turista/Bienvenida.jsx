@@ -1,12 +1,14 @@
 import Tilcayo from '../../components/Tilcayo'
 import { Onda } from '../../components/Paisaje'
 import { Button, Chip, LangToggle, Lines, Logo } from '../../components/ui'
-import { cotizar, RATE } from '../../data/config'
+import { useBackend } from '../../lib/backend'
+import { cotizarCon } from '../../lib/quote'
 import { useI18n } from '../../i18n'
 
 export default function Bienvenida({ nav, setState }) {
   const { t, bs } = useI18n()
-  const q = cotizar(100)
+  const { rate, user } = useBackend()
+  const q = cotizarCon(rate, 100)
 
   // Entrar a la app activa la trepada del tilcayo en Inicio
   const entrar = () => {
@@ -27,7 +29,7 @@ export default function Bienvenida({ nav, setState }) {
           <Tilcayo pose="feliz" className="asoma asoma--derecha brinca" />
           <div className="glass card flota flota--lenta">
             <span className="overline">{t('bienv.tasaHoy')}</span>
-            <strong className="display-m">1 USDC = {RATE} Bs</strong>
+            <strong className="display-m">1 USDC = {q.aplicada} Bs</strong>
             <span className="body-s muted">{t('bienv.tasaNota')}</span>
           </div>
         </div>
@@ -41,10 +43,16 @@ export default function Bienvenida({ nav, setState }) {
         {t('bienv.texto')}
       </p>
       <div className="stack-12 entra" style={{ '--i': 3 }}>
-        <Button onClick={() => nav.go('crear')}>{t('bienv.crear')}</Button>
-        <Button variant="secondary" icon={false} onClick={entrar}>
-          {t('bienv.tengo')}
-        </Button>
+        {user ? (
+          <Button onClick={entrar}>{t('bienv.continuarComo', { email: user.email })}</Button>
+        ) : (
+          <>
+            <Button onClick={() => nav.go('crear')}>{t('bienv.crear')}</Button>
+            <Button variant="secondary" icon={false} onClick={() => nav.go('crear')}>
+              {t('bienv.tengo')}
+            </Button>
+          </>
+        )}
       </div>
       <LangToggle className="centrado" />
     </div>

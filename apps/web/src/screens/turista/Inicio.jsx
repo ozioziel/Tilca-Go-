@@ -1,15 +1,34 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowUpDown, Bell, ChevronRight, Clock, Eye, EyeOff, MapPin, QrCode } from 'lucide-react'
 import Trepada from '../../components/Trepada'
 import { useReducedMotion } from '../../components/hooks'
 import Fila from '../../components/Fila'
 import { Onda } from '../../components/Paisaje'
 import { Button, Chip, IconButton, LangToggle, Lines, Logo } from '../../components/ui'
-import { MOVIMIENTOS, RATE, TURISTA } from '../../data/config'
+import { useBackend } from '../../lib/backend'
+import { ACTIVAS, ESTADO_FILA, fecha } from '../../lib/ordenes'
+import { cotizarCon } from '../../lib/quote'
 import { useI18n } from '../../i18n'
 
-export default function Inicio({ nav, state, setState }) {
-  const { t, L, num } = useI18n()
+export default function Inicio({ nav, state, setState, toast }) {
+  const { t, num, lang } = useI18n()
+  const { user, wallet, balance, rate, api } = useBackend()
+  const [ordenes, setOrdenes] = useState([])
+  const aplicada = cotizarCon(rate, 1).aplicada
+  const nombre = user ? user.email.split('@')[0].replace(/^./, (c) => c.toUpperCase()) : ''
+  const activa = ordenes.find((o) => ACTIVAS.has(o.status))
+
+  useEffect(() => {
+    if (!user) return
+    api('GET', '/orders')
+      .then((r) => setOrdenes(r.orders))
+      .catch(() => {})
+  }, [user, api])
+
+  const abrirOrden = (o) => {
+    setState((s) => ({ ...s, order: o }))
+    nav.go(o.status === 'IN_HANDOVER' ? 'entrega' : 'codigo')
+  }
   const rootRef = useRef(null)
   const refs = { logo: useRef(null), card: useRef(null), cta: useRef(null), tiles: useRef(null) }
   const reduce = useReducedMotion()
@@ -39,7 +58,7 @@ export default function Inicio({ nav, state, setState }) {
       </header>
 
       <div>
-        <h1 className="display-m">{t('inicio.hola', { name: TURISTA.nombre.split(' ')[0] })}</h1>
+        <h1 className="display-m">{nombre ? t('inicio.hola', { name: nombre }) : t('inicio.holaAnon')}</h1>
         <p className="body-s muted fila-icono">
           <MapPin size={14} aria-hidden="true" /> La Paz, Bolivia
         </p>
@@ -62,15 +81,26 @@ export default function Inicio({ nav, state, setState }) {
               <span className="label-s">{t('inicio.billetera')}</span>
               <span className="saldo__chip">Stellar</span>
             </div>
-            <span className="body-s saldo__suave">{t('inicio.saldo')}</span>
-            <strong className="saldo__monto">
-              {oculto ? '••••••' : num(TURISTA.saldo)} <small>USDC</small>
-            </strong>
-            <span className="body-s saldo__suave">{oculto ? '≈ Bs ••••' : `≈ Bs ${num(TURISTA.saldo * RATE)}`}</span>
-            <button type="button" className="saldo__ocultar" onClick={() => setState((s) => ({ ...s, saldoOculto: !s.saldoOculto }))}>
-              {oculto ? <Eye size={16} /> : <EyeOff size={16} />}
-              {oculto ? t('inicio.mostrar') : t('inicio.ocultar')}
-            </button>
+            {wallet.address ? (
+              <>
+                <span className="body-s saldo__suave">{t('inicio.saldo')}</span>
+                <strong className="saldo__monto">
+                  {oculto ? '••••••' : num(balance?.usdc ?? 0)} <small>USDC</small>
+                </strong>
+                <span className="body-s saldo__suave">{oculto ? '≈ Bs ••••' : `≈ Bs ${num((balance?.usdc ?? 0) * aplicada)}`}</span>
+                <button type="button" className="saldo__ocultar" onClick={() => setState((s) => ({ ...s, saldoOculto: !s.saldoOculto }))}>
+                  {oculto ? <Eye size={16} /> : <EyeOff size={16} />}
+                  {oculto ? t('inicio.mostrar') : t('inicio.ocultar')}
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="body-s saldo__suave">{t('inicio.sinWallet')}</span>
+                <button type="button" className="saldo__conectar" onClick={() => nav.go('wallet')}>
+                  {t('inicio.conectar')} <ChevronRight size={16} aria-hidden="true" />
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -81,7 +111,7 @@ export default function Inicio({ nav, state, setState }) {
         </span>
         <span className="tasa-pill__texto">
           <span className="label-s muted">{t('inicio.tasa')}</span>
-          <strong className="label-m">1 USDC = {RATE} Bs</strong>
+          <strong className="label-m">1 USDC = {aplicada} Bs</strong>
         </span>
         <Chip>{t('inicio.envivo')}</Chip>
       </button>
@@ -92,7 +122,13 @@ export default function Inicio({ nav, state, setState }) {
 
       <div className="accesos" ref={refs.tiles}>
         {accesos.map(({ id, label, Icon, tono }, i) => (
-          <button key={id} type="button" className="acceso glass" style={{ '--i': i }} onClick={() => nav.go(id)}>
+          <button
+            key={id}
+            type="button"
+            className="acceso glass"
+            style={{ '--i': i }}
+            onClick={() => (id === 'codigo' ? (activa ? abrirOrden(activa) : toast(t('inicio.sinCodigo'))) : nav.go(id))}
+          >
             <span className={`acceso__icono tono-${tono}`}>
               <Icon size={22} aria-hidden="true" />
             </span>
@@ -109,16 +145,17 @@ export default function Inicio({ nav, state, setState }) {
           </button>
         </div>
         <div className="glass card card--lista">
-          {MOVIMIENTOS.slice(0, 2).map((m, i) => (
+          {ordenes.length === 0 && <p className="body-s muted centrado">{user ? t('inicio.sinMov') : t('inicio.entraParaVer')}</p>}
+          {ordenes.slice(0, 2).map((o, i) => (
             <Fila
-              key={m.id}
+              key={o.id}
               i={i}
-              estado={m.estado}
-              titulo={L(m.titulo)}
-              detalle={L(m.detalle)}
-              monto={m.monto}
-              chip={t(`estado.${m.estado}`)}
-              onClick={m.estado === 'pendiente' ? () => nav.go('codigo') : undefined}
+              estado={ESTADO_FILA[o.status]}
+              titulo={o.agent.name}
+              detalle={`${fecha(o.created_at, lang)} · ${num(o.amount_usdc)} USDC`}
+              monto={`Bs ${num(o.net_bob)}`}
+              chip={t(`orden.${o.status}`)}
+              onClick={ACTIVAS.has(o.status) ? () => abrirOrden(o) : undefined}
             />
           ))}
         </div>

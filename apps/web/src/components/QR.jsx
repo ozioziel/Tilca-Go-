@@ -1,4 +1,6 @@
-// QR de demostración (patrón fijo, no codifica datos reales) y capa de «¡Listo!».
+import QRLib from 'qrcode'
+
+// QR de demostración (patrón fijo, no codifica datos reales), QR real y capa de «¡Listo!».
 
 function buildPath(n, seed) {
   let s = seed
@@ -37,5 +39,20 @@ export function Listo({ title, sub, dark = false, className = '' }) {
       <strong>{title}</strong>
       <span>{sub}</span>
     </div>
+  )
+}
+
+/** QR real que codifica `text` (lo escanea la app del cajero). */
+export function RealQR({ text, className = '' }) {
+  const qr = QRLib.create(text, { errorCorrectionLevel: 'M' })
+  const n = qr.modules.size
+  let d = ''
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) if (qr.modules.get(x, y)) d += `M${x} ${y}h1v1h-1z`
+  }
+  return (
+    <svg className={`qr ${className}`} viewBox={`-1 -1 ${n + 2} ${n + 2}`} shapeRendering="crispEdges" role="img" aria-label={text}>
+      <path d={d} fill="#2A211C" />
+    </svg>
   )
 }

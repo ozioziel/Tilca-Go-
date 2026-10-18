@@ -8,10 +8,10 @@ Turistas con USDC en Stellar retiran **bolivianos en efectivo** con una red de c
 
 | Carpeta | Qué es | Stack |
 | --- | --- | --- |
-| `apps/web` | Prototipo navegable: landing, app del turista y app del cajero | React 19 + Vite |
+| `apps/web` | Landing, app del turista y app del cajero, conectadas al API y a Freighter | React 19 + Vite + Freighter |
 | `apps/api` | Backend: cotizaciones, cajeros, órdenes, QR/PIN, gas patrocinado y sincronización con la cadena | Node + TypeScript + Fastify + PostgreSQL |
 | `contracts/escrow` | Contrato `TilcaGoEscrow` | Rust + soroban-sdk |
-| `scripts` | `seed-testnet.sh` prepara testnet desde cero; `extend-ttl.sh` mantiene vivo el contrato | Stellar CLI |
+| `scripts` | `seed-testnet.sh` prepara testnet desde cero; `extend-ttl.sh` mantiene vivo el contrato; `fund-wallet.sh` envía TUSDC de prueba | Stellar CLI |
 
 ## Cómo funciona (MVP)
 
@@ -50,11 +50,22 @@ npm run dev         # http://localhost:4000
 # 4. Flujo completo contra testnet (en otra terminal): deposit → código → start_handover → release
 npm run demo
 
-# 5. Prototipo
+# 5. Frontend (usa VITE_API_URL, por defecto http://localhost:4000)
 cd ../web
 npm install
 npm run dev         # http://localhost:5173
 ```
+
+### Probar con Freighter
+
+1. Instala [Freighter](https://www.freighter.app/) y cámbiala a **Testnet**.
+2. Usa una cuenta de prueba. Hay dos formas:
+   - **Importar las cuentas del seed** (lo más rápido): en Freighter, *Import wallet* con las claves de `apps/api/.env.demo`. `TURISTA_1_SECRET` es un turista con 500 TUSDC y `CAJERO_1_SECRET` es la cajera de «Sagárnaga Cambios». Son claves de testnet: no las uses para nada más.
+   - **Tu propia cuenta**: en Freighter agrega el activo `TUSDC` con el emisor que muestra el seed y luego corre `./scripts/fund-wallet.sh <tu dirección G...>`.
+3. App del turista (`#/app`): entra con cualquier correo; en modo demo el código aparece en pantalla.
+4. App del cajero (`#/cajero`): entra con `rosa@tilcago.test`. Freighter debe tener la cuenta de `CAJERO_1_SECRET`, la registrada para ese punto.
+
+Para probar los dos lados en la misma computadora, abre cada app en un perfil distinto del navegador, cada uno con su Freighter y su cuenta.
 
 Testnet se reinicia cada cierto tiempo: si el API avisa que no encuentra el contrato, vuelve a correr `./scripts/seed-testnet.sh` y `npm run seed`. Para usar un USDC de prueba existente en lugar de TUSDC: `ASSET=USDC:G... ./scripts/seed-testnet.sh`.
 
@@ -85,7 +96,7 @@ cd apps/api && npm test        # montos y validación de transacciones patrocina
 
 El estado de las órdenes lo actualiza un proceso que lee los eventos del contrato desde Stellar RPC. Si la base y la cadena difieren, manda la cadena.
 
-## Prototipo (`apps/web`)
+## Frontend (`apps/web`)
 
 | Ruta | Qué es |
 | --- | --- |
@@ -93,6 +104,11 @@ El estado de las órdenes lo actualiza un proceso que lee los eventos del contra
 | `#/app` | App del turista: bienvenida, registro, inicio, cotizar, cajeros, pagar, código, entrega en el mostrador, historial y perfil |
 | `#/cajero` | App del cajero: inicio, escanear, validar, entrega en curso y ganancias |
 
-Por ahora el prototipo usa datos simulados (`src/data/config.js`); conectarlo al API y a Freighter es la siguiente etapa. Las cifras usan la cotización de ejemplo de la v3: referencia Bs 10.00, margen 0.5 %, comisión 1.5 % → 100 USDC = Bs 980.08.
+Las apps usan datos reales del API: tasa, cajeros, órdenes, código QR/PIN y estados de la cadena. Las firmas pasan por Freighter y la comisión de red la paga TilcaGo. Si el API no responde, la landing y el cotizador muestran la cotización de ejemplo de la v3: referencia Bs 10.00, margen 0.5 %, comisión 1.5 % → 100 USDC = Bs 980.08.
+
+| App | Pantallas |
+| --- | --- |
+| Turista | Bienvenida, acceso por correo + código, wallet (Freighter, red, trustline y saldo), inicio, cotizar, cajeros (mapa real), pagar, código QR + PIN, entrega en el mostrador, historial y perfil |
+| Cajero | Acceso, inicio con efectivo declarado/reservado, escanear (cámara con BarcodeDetector o código a mano), validar, entrega en curso, órdenes, ganancias y perfil |
 
 El diseño de referencia está en Figma (archivo «MOCKUPS», ajustado a la v3).
