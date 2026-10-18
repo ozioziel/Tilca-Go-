@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { ApiError, loadSession, request, saveSession } from './api'
-import { connectWallet, signXdr, walletBalances, walletStatus, WalletError } from './wallet'
+import { connectWallet, createDeviceWallet, forgetDeviceWallet, importDeviceWallet, signXdr, walletBalances, walletStatus, WalletError } from './wallet'
 
 /**
  * Estado compartido de una app (turista o cajero): sesión, configuración del
@@ -13,7 +13,7 @@ export function BackendProvider({ app, children }) {
   const [health, setHealth] = useState(null)
   const [rate, setRate] = useState(null)
   const [offline, setOffline] = useState(false)
-  const [wallet, setWallet] = useState({ checked: false, installed: false, address: null, passphrase: null })
+  const [wallet, setWallet] = useState({ checked: false, kind: null, installed: false, address: null, passphrase: null })
   const [balance, setBalance] = useState(null)
   const sessionRef = useRef(session)
   sessionRef.current = session
@@ -70,7 +70,7 @@ export function BackendProvider({ app, children }) {
   )
 
   const checkWallet = useCallback(async () => {
-    const st = await walletStatus().catch(() => ({ installed: false, address: null, passphrase: null }))
+    const st = await walletStatus().catch(() => ({ kind: null, installed: false, address: null, passphrase: null }))
     setWallet({ checked: true, ...st })
     return st
   }, [])
@@ -85,6 +85,28 @@ export function BackendProvider({ app, children }) {
 
   const connect = useCallback(async () => {
     await connectWallet()
+    return checkWallet()
+  }, [checkWallet])
+
+  // Wallet de prueba en el dispositivo (app móvil): crear, importar, olvidar y pedir TUSDC al faucet de la demo
+  const createDevice = useCallback(async () => {
+    if (!health) throw new WalletError('offline', 'Sin conexión con TilcaGo')
+    await createDeviceWallet(health.asset)
+    return checkWallet()
+  }, [health, checkWallet])
+
+  const importDevice = useCallback(
+    async (secret) => {
+      if (!health) throw new WalletError('offline', 'Sin conexión con TilcaGo')
+      await importDeviceWallet(secret, health.asset)
+      return checkWallet()
+    },
+    [health, checkWallet],
+  )
+
+  const forgetDevice = useCallback(async () => {
+    await forgetDeviceWallet()
+    setBalance(null)
     return checkWallet()
   }, [checkWallet])
 
@@ -129,8 +151,8 @@ export function BackendProvider({ app, children }) {
   )
 
   const value = useMemo(
-    () => ({ app, session, user: session?.user ?? null, health, rate, offline, wallet, balance, api, login, logout, requestOtp, checkWallet, connect, refreshBalance, sendTx }),
-    [app, session, health, rate, offline, wallet, balance, api, login, logout, requestOtp, checkWallet, connect, refreshBalance, sendTx],
+    () => ({ app, session, user: session?.user ?? null, health, rate, offline, wallet, balance, api, login, logout, requestOtp, checkWallet, connect, refreshBalance, sendTx, createDevice, importDevice, forgetDevice }),
+    [app, session, health, rate, offline, wallet, balance, api, login, logout, requestOtp, checkWallet, connect, refreshBalance, sendTx, createDevice, importDevice, forgetDevice],
   )
   return <BackendContext.Provider value={value}>{children}</BackendContext.Provider>
 }

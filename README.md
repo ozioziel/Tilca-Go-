@@ -69,6 +69,26 @@ Para probar los dos lados en la misma computadora, abre cada app en un perfil di
 
 Testnet se reinicia cada cierto tiempo: si el API avisa que no encuentra el contrato, vuelve a correr `./scripts/seed-testnet.sh` y `npm run seed`. Para usar un USDC de prueba existente en lugar de TUSDC: `ASSET=USDC:G... ./scripts/seed-testnet.sh`.
 
+## App móvil (Android e iOS)
+
+La misma app de React se empaqueta como app nativa con [Capacitor](https://capacitorjs.com) (`apps/web/android` y `apps/web/ios`). En el celular abre directo la app del turista; desde la bienvenida se pasa a TilcaGo Partners (cajero).
+
+- **Wallet en el celular:** como Freighter es una extensión de escritorio, la app crea (o importa) una **wallet de prueba de testnet guardada en el dispositivo** y firma ahí mismo. Con el faucet de la demo (`POST /dev/faucet`, activo si el API tiene `FAUCET_ISSUER_SECRET`) recibe 100 TUSDC desde la pantalla de wallet. Es solo para testnet.
+- **Escáner del cajero:** usa el escáner de Google (ML Kit) en Android, sin pedir permiso de cámara.
+- **Botón atrás de Android:** vuelve una pantalla; en la primera, cierra la app.
+
+```bash
+cd apps/web
+npm run build:movil         # compila con .env.movil y copia la web a los proyectos nativos
+npx cap open android        # abre Android Studio → Run
+npm run android             # o compila e instala directo en el emulador/celular conectado
+npm run ios                 # simulador de iOS (requiere Xcode)
+```
+
+- La URL del API vista desde el celular se define en `apps/web/.env.movil`: `http://10.0.2.2:4000` en el emulador de Android, `http://localhost:4000` en el simulador de iOS. En un celular real hace falta el API publicado con HTTPS.
+- Android Studio trae JDK 25: el proyecto usa Gradle 9.1, que lo soporta. Desde la terminal: `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew assembleDebug` dentro de `apps/web/android` genera `app/build/outputs/apk/debug/app-debug.apk`, que se puede instalar en cualquier Android.
+- Ícono y splash del tilcayo: fuentes en `apps/web/assets`; se regeneran con `npx capacitor-assets generate`.
+
 ## Tests
 
 ```bash

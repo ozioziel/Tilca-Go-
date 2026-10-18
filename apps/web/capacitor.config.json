@@ -1,0 +1,19 @@
+{
+  "appId": "com.tilcago.app",
+  "appName": "TilcaGo",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": true
+  },
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "plugins": {
+    "StatusBar": {
+      "overlaysWebView": false,
+      "backgroundColor": "#F3E4D4",
+      "style": "LIGHT"
+    }
+  }
+}
