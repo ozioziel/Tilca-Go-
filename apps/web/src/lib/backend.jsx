@@ -70,10 +70,10 @@ export function BackendProvider({ app, children }) {
   )
 
   const checkWallet = useCallback(async () => {
-    const st = await walletStatus().catch(() => ({ kind: null, installed: false, address: null, passphrase: null }))
+    const st = await walletStatus(app).catch(() => ({ kind: null, installed: false, address: null, passphrase: null }))
     setWallet({ checked: true, ...st })
     return st
-  }, [])
+  }, [app])
 
   useEffect(() => {
     checkWallet()
@@ -91,24 +91,24 @@ export function BackendProvider({ app, children }) {
   // Wallet de prueba en el dispositivo (app móvil): crear, importar, olvidar y pedir TUSDC al faucet de la demo
   const createDevice = useCallback(async () => {
     if (!health) throw new WalletError('offline', 'Sin conexión con TilcaGo')
-    await createDeviceWallet(health.asset)
+    await createDeviceWallet(app, health.asset)
     return checkWallet()
-  }, [health, checkWallet])
+  }, [app, health, checkWallet])
 
   const importDevice = useCallback(
     async (secret) => {
       if (!health) throw new WalletError('offline', 'Sin conexión con TilcaGo')
-      await importDeviceWallet(secret, health.asset)
+      await importDeviceWallet(app, secret, health.asset)
       return checkWallet()
     },
-    [health, checkWallet],
+    [app, health, checkWallet],
   )
 
   const forgetDevice = useCallback(async () => {
-    await forgetDeviceWallet()
+    await forgetDeviceWallet(app)
     setBalance(null)
     return checkWallet()
-  }, [checkWallet])
+  }, [app, checkWallet])
 
   const requestOtp = useCallback((email) => request('POST', '/auth/otp/request', { body: { email } }), [])
 
@@ -141,13 +141,13 @@ export function BackendProvider({ app, children }) {
         throw new WalletError('wrong_network', 'Cambia Freighter a Testnet')
       }
       onPhase('firmando')
-      const signed = await signXdr(prepared.xdr, prepared.network_passphrase, prepared.source)
+      const signed = await signXdr(app, prepared.xdr, prepared.network_passphrase, prepared.source)
       onPhase('enviando')
       const res = await api('POST', '/tx/submit', { xdr: signed })
       refreshBalance(st.address)
       return res
     },
-    [api, checkWallet, refreshBalance],
+    [app, api, checkWallet, refreshBalance],
   )
 
   const value = useMemo(
