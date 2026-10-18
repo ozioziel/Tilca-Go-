@@ -14,7 +14,8 @@ const testWallet = () => (import.meta.env.DEV && typeof window !== 'undefined' ?
 export const FREIGHTER_URL = 'https://www.freighter.app/'
 export const TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015'
 const HORIZON_URL = 'https://horizon-testnet.stellar.org'
-const DEVICE_KEY = 'tilcago.wallet.testnet'
+// Cada app (turista / cajero) guarda su propia wallet: en el mismo navegador no se pisan
+const deviceKey = (app) => `tilcago.wallet.testnet.${app}`
 
 export class WalletError extends Error {
   constructor(code, message) {
@@ -25,21 +26,21 @@ export class WalletError extends Error {
 
 // ---------- Wallet de prueba en el dispositivo ----------
 
-let deviceSecretCache
+const deviceSecretCache = {}
 
-async function deviceSecret() {
-  if (deviceSecretCache !== undefined) return deviceSecretCache
-  const { value } = await Preferences.get({ key: DEVICE_KEY }).catch(() => ({ value: null }))
-  if (!value) return (deviceSecretCache = null)
+async function deviceSecret(app) {
+  if (deviceSecretCache[app] !== undefined) return deviceSecretCache[app]
+  const { value } = await Preferences.get({ key: deviceKey(app) }).catch(() => ({ value: null }))
+  if (!value) return (deviceSecretCache[app] = null)
   const { StrKey } = await sdk()
-  deviceSecretCache = StrKey.isValidEd25519SecretSeed(value) ? value : null
-  return deviceSecretCache
+  deviceSecretCache[app] = StrKey.isValidEd25519SecretSeed(value) ? value : null
+  return deviceSecretCache[app]
 }
 
-async function saveDeviceSecret(secret) {
-  deviceSecretCache = secret
-  if (secret) await Preferences.set({ key: DEVICE_KEY, value: secret })
-  else await Preferences.remove({ key: DEVICE_KEY })
+async function saveDeviceSecret(app, secret) {
+  deviceSecretCache[app] = secret
+  if (secret) await Preferences.set({ key: deviceKey(app), value: secret })
+  else await Preferences.remove({ key: deviceKey(app) })
 }
 
 /** Agrega la trustline al activo si la cuenta existe y todavía no la tiene. */
@@ -59,18 +60,18 @@ async function ensureTrustline(secret, assetLine) {
 }
 
 /** Crea una cuenta de testnet en el dispositivo, la fondea con Friendbot y agrega la trustline. */
-export async function createDeviceWallet(assetLine) {
+export async function createDeviceWallet(app, assetLine) {
   const { Keypair } = await sdk()
   const kp = Keypair.random()
   const res = await fetch(`https://friendbot.stellar.org/?addr=${kp.publicKey()}`)
   if (!res.ok) throw new WalletError('friendbot', 'Friendbot no respondió; intenta de nuevo en unos segundos')
   await ensureTrustline(kp.secret(), assetLine)
-  await saveDeviceSecret(kp.secret())
+  await saveDeviceSecret(app, kp.secret())
   return kp.publicKey()
 }
 
 /** Importa una clave secreta de TESTNET (por ejemplo, una cuenta del seed de la demo). */
-export async function importDeviceWallet(secret, assetLine) {
+export async function importDeviceWallet(app, secret, assetLine) {
   const { Keypair, StrKey } = await sdk()
   const s = secret.trim()
   if (!StrKey.isValidEd25519SecretSeed(s)) throw new WalletError('bad_secret', 'La clave no es válida (empieza con S y tiene 56 caracteres)')
@@ -78,21 +79,21 @@ export async function importDeviceWallet(secret, assetLine) {
   const res = await fetch(`${HORIZON_URL}/accounts/${address}`)
   if (res.status === 404) await fetch(`https://friendbot.stellar.org/?addr=${address}`)
   await ensureTrustline(s, assetLine)
-  await saveDeviceSecret(s)
+  await saveDeviceSecret(app, s)
   return address
 }
 
-export async function forgetDeviceWallet() {
-  await saveDeviceSecret(null)
+export async function forgetDeviceWallet(app) {
+  await saveDeviceSecret(app, null)
 }
 
 // ---------- API común ----------
 
 /** Estado de la wallet sin pedir permisos: tipo, dirección y red. */
-export async function walletStatus() {
+export async function walletStatus(app) {
   const test = testWallet()
   if (test) return { kind: 'test', installed: true, address: test.address, passphrase: test.network ?? TESTNET_PASSPHRASE }
-  const secret = await deviceSecret()
+  const secret = await deviceSecret(app)
   if (secret) {
     const { Keypair } = await sdk()
     return { kind: 'device', installed: true, address: Keypair.fromSecret(secret).publicKey(), passphrase: TESTNET_PASSPHRASE }
@@ -115,10 +116,10 @@ export async function connectWallet() {
 }
 
 /** Firma una transacción con la cuenta `address`. Devuelve el XDR firmado. */
-export async function signXdr(xdr, passphrase, address) {
+export async function signXdr(app, xdr, passphrase, address) {
   const test = testWallet()
   if (test) return test.sign(xdr)
-  const secret = await deviceSecret()
+  const secret = await deviceSecret(app)
   if (secret) {
     const { Keypair, TransactionBuilder } = await sdk()
     const kp = Keypair.fromSecret(secret)

@@ -26,6 +26,13 @@ El API necesita `apps/api/.env` y `apps/api/.env.demo`, que genera `./scripts/se
 scp apps/api/.env apps/api/.env.demo usuario@tu-vps:~/Tilca-Go-/apps/api/
 ```
 
+Ya en el servidor, deja `.env.demo` legible para el contenedor: el API corre con el usuario 1000 y, si tu usuario del servidor tiene otro número (por ejemplo 1001), con `600` no podrá leerlo y `npm run seed` dirá «Sin clave para…». El `.env` principal puede quedar en `600`, porque lo lee Docker y no el contenedor.
+
+```bash
+chmod 600 apps/api/.env
+chmod 644 apps/api/.env.demo
+```
+
 ## 2. En el servidor
 
 ```bash
