@@ -6,10 +6,10 @@ import { config } from '../config'
 import { audit, pool, tx } from '../db/pool'
 import { contractOrderId, hashSecret, pin as newPin, sha256Hex, withdrawalCode } from '../lib/codes'
 import { badRequest, conflict, forbidden, HttpError, notFound } from '../lib/errors'
-import { formatBob, formatUsdc } from '../lib/money'
+import { contractSplit, formatBob, formatUsdc } from '../lib/money'
 import { buildEscrowCall, hasUsdcTrustline, scv, server } from '../stellar/escrow'
 import { argNative, inspectSponsoredTx, SPONSORED, submitSponsored } from '../stellar/sponsor'
-import { syncOnce } from '../stellar/sync'
+import { syncUntilChanged } from '../stellar/sync'
 import { stellarAddress } from './agents'
 import { requireUser, type User } from './auth'
 
@@ -33,10 +33,17 @@ interface OrderRow {
   expiry: Date
   handover_at: Date | null
   created_at: Date
+  tourist_email: string
+  fee_usdc: bigint
+  fee_platform_bps: number
+  rate_applied_e4: bigint
 }
 
-const ORDER_SQL = `SELECT o.*, a.user_id AS agent_user_id, a.display_name AS agent_name, a.address_text AS agent_address
-                   FROM orders o JOIN agents a ON a.id = o.agent_id`
+const ORDER_SQL = `SELECT o.*, a.user_id AS agent_user_id, a.display_name AS agent_name, a.address_text AS agent_address,
+                          u.email AS tourist_email, q.fee_usdc, q.fee_platform_bps, q.rate_applied_e4
+                   FROM orders o JOIN agents a ON a.id = o.agent_id JOIN users u ON u.id = o.tourist_id JOIN quotes q ON q.id = o.quote_id`
+
+const maskEmail = (e: string) => e.replace(/^(.)(.*)(@.*)$/, (_m, a: string, b: string, c: string) => `${a}${'•'.repeat(Math.min(b.length, 6))}${c}`)
 
 async function loadOrder(where: string, value: string): Promise<OrderRow> {
   const { rows } = await pool.query<OrderRow>(`${ORDER_SQL} WHERE ${where} = $1`, [value])
@@ -60,12 +67,20 @@ async function presentOrder(o: OrderRow) {
     'SELECT status, expires_at, redeemed_at FROM withdrawals WHERE order_id = $1 ORDER BY created_at DESC LIMIT 1',
     [o.id],
   )
+  const split = contractSplit(o.amount_usdc, o.fee_platform_bps)
   return {
     id: o.id,
     status: o.status,
     contract_order_id: o.contract_order_id,
     amount_usdc: formatUsdc(o.amount_usdc, 7),
     net_bob: formatBob(o.net_bob_cents),
+    rate_applied_bob: `${o.rate_applied_e4 / 10_000n}.${(o.rate_applied_e4 % 10_000n).toString().padStart(4, '0')}`,
+    fee_usdc: formatUsdc(o.fee_usdc, 7),
+    agent_receives_usdc: formatUsdc(split.agent, 7),
+    agent_fee_usdc: formatUsdc(o.fee_usdc - split.platform, 7),
+    platform_fee_usdc: formatUsdc(split.platform, 7),
+    tourist_email: maskEmail(o.tourist_email),
+    created_at: o.created_at,
     agent: { id: o.agent_id, name: o.agent_name, address: o.agent_address, wallet: o.agent_wallet },
     tourist_wallet: o.tourist_wallet,
     payment_deadline: o.payment_deadline,
@@ -251,7 +266,7 @@ export async function orderRoutes(app: FastifyInstance) {
     await audit(pool, user.id, `tx_${call.fn}`, o.id, result)
     if (result.status !== 'SUCCESS') throw new HttpError(502, 'tx_failed', `La red rechazó la transacción: ${result.error}`)
 
-    await syncOnce() // aplica los eventos del contrato antes de responder
+    await syncUntilChanged(o.contract_order_id, o.status) // aplica los eventos del contrato antes de responder
     return {
       hash: result.hash,
       status: result.status,

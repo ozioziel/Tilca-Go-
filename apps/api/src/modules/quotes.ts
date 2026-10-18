@@ -49,6 +49,23 @@ export function presentQuote(q: QuoteRow) {
 }
 
 export async function quoteRoutes(app: FastifyInstance) {
+  // Público: tasa vigente para calcular en vivo mientras el turista escribe (no fija nada)
+  app.get('/rate', async () => {
+    const rate = await currentRate()
+    const one = computeQuote(10_000_000n, rate.rateRefE4, config.MARGIN_BPS, config.FEE_BPS_TOTAL)
+    const fmt = (e4: bigint) => `${e4 / 10_000n}.${(e4 % 10_000n).toString().padStart(4, '0')}`
+    return {
+      rate_ref_bob: fmt(rate.rateRefE4),
+      rate_applied_bob: fmt(one.rateAppliedE4),
+      margin_bps: config.MARGIN_BPS,
+      fee_bps: config.FEE_BPS_TOTAL,
+      fee_platform_bps: config.FEE_BPS_PLATFORM,
+      quote_ttl_min: config.QUOTE_TTL_MIN,
+      source: rate.source,
+      fetched_at: rate.fetchedAt,
+    }
+  })
+
   // Público: se puede cotizar sin cuenta (v3 §4 paso 1-2)
   app.get('/quotes', async (req) => {
     const { amount_usdc } = z.object({ amount_usdc: z.string() }).parse(req.query)

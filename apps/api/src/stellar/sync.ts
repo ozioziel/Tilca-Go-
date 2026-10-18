@@ -198,6 +198,21 @@ export function syncOnce(): Promise<void> {
   return running
 }
 
+/**
+ * Sincroniza hasta que la orden deje el estado `from` (o se agoten los intentos).
+ * Si ya había una sincronización en curso, puede haber empezado antes de la
+ * transacción: por eso siempre se espera a que termine y se corre otra.
+ */
+export async function syncUntilChanged(contractOrderId: string, from: string, attempts = 8): Promise<void> {
+  for (let i = 0; i < attempts; i++) {
+    if (running) await running.catch(() => {})
+    await syncOnce()
+    const { rows } = await pool.query<{ status: string }>('SELECT status FROM orders WHERE contract_order_id = $1', [contractOrderId])
+    if (rows[0] && rows[0].status !== from) return
+    await new Promise((r) => setTimeout(r, 700)) // el evento puede tardar un instante en aparecer en RPC
+  }
+}
+
 /** Marca como vencidas las órdenes que no se pagaron y libera el efectivo reservado. */
 export async function expireUnpaid(): Promise<number> {
   return tx(async (db) => {
