@@ -1,0 +1,19 @@
+# Base de datos local para el backend (apps/api)
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: tilcago
+      POSTGRES_PASSWORD: tilcago
+      POSTGRES_DB: tilcago
+    ports:
+      - "5433:5432"
+    volumes:
+      - tilcago-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tilcago"]
+      interval: 2s
+      retries: 20
+
+volumes:
+  tilcago-db:
