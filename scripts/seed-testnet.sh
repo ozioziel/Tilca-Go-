@@ -89,12 +89,15 @@ ESCROW=$(stellar contract deploy \
   --fee_account "$PLATFORM_FEE" --fee_bps "$FEE_BPS" --handover_window "$HANDOVER_WINDOW")
 echo "  $ESCROW"
 
+log "Extendiendo la vida (TTL) de la instancia y del código"
+"$ROOT/scripts/extend-ttl.sh" "$ESCROW" >/dev/null
+
 log "Escribiendo apps/api/.env y apps/api/.env.demo"
 mkdir -p "$ROOT/apps/api"
 cat > "$ROOT/apps/api/.env" <<EOF
 # Generado por scripts/seed-testnet.sh — $(date -u +%Y-%m-%dT%H:%M:%SZ)
 PORT=4000
-DATABASE_URL=${DATABASE_URL:-postgres://localhost:5432/tilcago}
+DATABASE_URL=${DATABASE_URL:-postgres://tilcago:tilcago@localhost:5433/tilcago}
 STELLAR_RPC_URL=$RPC_URL
 STELLAR_NETWORK_PASSPHRASE=$PASSPHRASE
 STELLAR_EXPLORER=https://stellar.expert/explorer/testnet

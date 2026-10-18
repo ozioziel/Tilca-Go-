@@ -27,12 +27,17 @@ const MAX_FEE_BPS: u32 = 1_000;
 const MAX_ORDER_SECS: u64 = 7 * 24 * 60 * 60;
 const BPS: i128 = 10_000;
 
-// TTL de las órdenes en el almacenamiento persistente (≈ 5 s por ledger).
+// TTL de las órdenes en el almacenamiento persistente (≈ 5 s por ledger). Una orden vive
+// como máximo 7 días; 14 días de vida alcanzan y abaratan la renta que paga cada depósito.
+// El historial completo queda igual en los eventos de la cadena.
 const DAY_IN_LEDGERS: u32 = 17_280;
-const ORDER_TTL_THRESHOLD: u32 = 30 * DAY_IN_LEDGERS;
-const ORDER_TTL_EXTEND_TO: u32 = 60 * DAY_IN_LEDGERS;
-const INSTANCE_TTL_THRESHOLD: u32 = 30 * DAY_IN_LEDGERS;
-const INSTANCE_TTL_EXTEND_TO: u32 = 60 * DAY_IN_LEDGERS;
+const ORDER_TTL_THRESHOLD: u32 = 7 * DAY_IN_LEDGERS;
+const ORDER_TTL_EXTEND_TO: u32 = 14 * DAY_IN_LEDGERS;
+// La instancia y el código los extiende el admin (scripts/extend-ttl.sh) por meses. El contrato
+// solo los extiende como red de seguridad cuando les queda menos de un día, para que la renta
+// del código no la pague el depósito de un turista.
+const INSTANCE_TTL_THRESHOLD: u32 = DAY_IN_LEDGERS;
+const INSTANCE_TTL_EXTEND_TO: u32 = 2 * DAY_IN_LEDGERS;
 
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]

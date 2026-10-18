@@ -21,3 +21,4 @@ Thumbs.db
 
 # Rust / Soroban
 target
+test_snapshots
