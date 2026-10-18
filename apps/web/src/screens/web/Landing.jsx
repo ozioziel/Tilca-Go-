@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   ArrowRight, ArrowUpDown, Check, ChevronDown, DollarSign, Eye, Globe, Layers, MapPin,
-  Navigation, Percent, QrCode, Search, ShieldCheck, Star, Wallet, Zap,
+  ExternalLink, Navigation, Percent, QrCode, Search, ShieldCheck, Star, Wallet, Zap,
 } from 'lucide-react'
 import Tilcayo from '../../components/Tilcayo'
 import Mapa from '../../components/Mapa'
@@ -21,8 +21,11 @@ export default function Landing() {
   const [usd, setUsd] = useState('100')
   // Tasa vigente del API; sin conexión usa la cotización de ejemplo
   const [rate, setRate] = useState(null)
+  // Dirección del contrato TilcaGoEscrow desplegado (se lee del API para que siga al último despliegue)
+  const [escrow, setEscrow] = useState(null)
   useEffect(() => {
     request('GET', '/rate').then(setRate).catch(() => {})
+    request('GET', '/health').then((h) => setEscrow(h.escrow)).catch(() => {})
   }, [])
   const q = cotizarCon(rate, Number(usd) || 0)
   // Desglose de la cotización de ejemplo para 100 USDC: referencia, margen y comisión
@@ -157,6 +160,22 @@ export default function Landing() {
             <span className="overline stellar__ov">{t('web.stellarOv')}</span>
             <h2 className="display-l">{t('web.stellarTitulo')}</h2>
             <p className="body-m">{t('web.stellarTexto')}</p>
+            {escrow && (
+              <a
+                className="stellar__contrato"
+                href={`https://stellar.expert/explorer/testnet/contract/${escrow}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <span className="stellar__contrato-texto">
+                  <strong>{t('web.verContrato')}</strong>
+                  <span>
+                    TilcaGoEscrow · {escrow.slice(0, 6)}…{escrow.slice(-6)}
+                  </span>
+                </span>
+                <ExternalLink size={18} aria-hidden="true" />
+              </a>
+            )}
           </div>
           <div className="stellar__datos">
             {[[Zap, '~5 s', t('web.st1')], [Percent, 'Bs 0', t('web.st2')], [ShieldCheck, t('web.st3v'), t('web.st3')]].map(([Icon, v, l], i) => (

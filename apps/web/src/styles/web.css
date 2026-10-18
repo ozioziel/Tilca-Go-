@@ -488,3 +488,36 @@
     top: -6px;
   }
 }
+
+/* Enlace al contrato TilcaGoEscrow en el explorador de Stellar */
+.stellar__contrato {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  width: max-content;
+  max-width: 100%;
+  margin-top: 8px;
+  padding: 12px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s;
+}
+.stellar__contrato:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: var(--terra-soft);
+}
+.stellar__contrato-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stellar__contrato-texto strong {
+  font: 600 15px / 1.3 var(--font);
+}
+.stellar__contrato-texto span {
+  color: rgba(255, 255, 255, 0.65);
+  font: 500 12px / 1.3 var(--font-mono, ui-monospace, monospace);
+}
