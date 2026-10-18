@@ -87,6 +87,7 @@ npm run ios                 # simulador de iOS (requiere Xcode)
 
 - La URL del API vista desde el celular se define en `apps/web/.env.movil`: `http://10.0.2.2:4000` en el emulador de Android, `http://localhost:4000` en el simulador de iOS. En un celular real hace falta el API publicado con HTTPS.
 - Android Studio trae JDK 25: el proyecto usa Gradle 9.1, que lo soporta. Desde la terminal: `JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew assembleDebug` dentro de `apps/web/android` genera `app/build/outputs/apk/debug/app-debug.apk`, que se puede instalar en cualquier Android.
+- **GitHub Actions** (`.github/workflows/android.yml`): en cada push y pull request compila el APK y lo deja en la pestaña *Actions* como artefacto descargable por 14 días. La URL del API que va dentro del APK se configura en la variable del repositorio `VITE_API_URL` (*Settings → Secrets and variables → Actions → Variables*); sin ella usa la del emulador.
 - Ícono y splash del tilcayo: fuentes en `apps/web/assets`; se regeneran con `npx capacitor-assets generate`.
 
 ## Tests
